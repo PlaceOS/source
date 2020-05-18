@@ -1,0 +1,31 @@
+name: placeos-mqtt
+version: 0.1.0
+crystal: 0.34.0
+
+targets:
+  mqtt:
+    main: src/app.cr
+
+dependencies:
+  action-controller:
+    github: spider-gazelle/action-controller
+  core:
+    github: placeos/core
+    version: ~> 1
+  models:
+    github: placeos/models
+    branch: feat/broker
+    version: ~> 1
+  mqtt:
+    github: spider-gazelle/crystal-mqtt
+  rethinkdb-orm:
+    github: spider-gazelle/rethinkdb-orm
+
+development_dependencies:
+  faker:
+    github: askn/faker
+  ameba:
+    github: crystal-ameba/ameba
+
+authors:
+  - Caspian Baska <caspian@place.technology>
