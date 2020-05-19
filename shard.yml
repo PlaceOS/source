@@ -14,12 +14,13 @@ dependencies:
     version: ~> 1
   models:
     github: placeos/models
-    branch: feat/broker
     version: ~> 1
   mqtt:
     github: spider-gazelle/crystal-mqtt
   rethinkdb-orm:
     github: spider-gazelle/rethinkdb-orm
+  rwlock:
+    github: spider-gazelle/readers-writer
 
 development_dependencies:
   faker:

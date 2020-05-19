@@ -102,7 +102,7 @@ shards:
 
   models:
     github: placeos/models
-    version: 1.0.10
+    version: 1.1.0
 
   mqtt:
     github: spider-gazelle/crystal-mqtt

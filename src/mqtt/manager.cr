@@ -16,7 +16,7 @@ module PlaceOS::MQTT
 
     def initialize(
       @router : Router = Router.new,
-      @broker_listener : BrokerListener = BrokerListener.new,
+      @broker_listener : BrokerListener = BrokerListener.new
     )
     end
 
