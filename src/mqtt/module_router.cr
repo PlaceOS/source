@@ -1,15 +1,15 @@
-require "models/zone"
+require "models/module"
 
 require "./publish_metadata"
 require "./publisher"
 require "./resource"
 
 module PlaceOS::MQTT
-  # Zone router...
-  # - listens for changes to Zone's tags and update mappings in SystemRouter
+  # Module router...
+  # - listens for changes to the Module's name and update mappings in SystemRouter
   # - publishes metadata
-  class ZoneRouter < Resource(Model::Zone)
-    include PublishMetadata(Model::Zone)
+  class ZoneRouter < Resource(Model::Module)
+    include PublishMetadata(Model::Module)
 
     private getter publisher : Publisher
     private getter system_router : SystemRouter

@@ -1,17 +1,17 @@
-require "core/resource"
 require "models/control_system"
 require "models/module"
 require "models/zone"
 require "rwlock"
 
-require "./publisher"
 require "./publish_metadata"
+require "./publisher"
+require "./resource"
 
 module PlaceOS::MQTT
   # System router...
   # - listens for changes to the zone_ids list, and updates mappings accordingly
   # - publishes metadata
-  class SystemRouter < Core::Resource(Model::ControlSystem)
+  class SystemRouter < Resource(Model::ControlSystem)
     include PublishMetadata(Model::ControlSystem)
     Log = ::Log.for("mqtt.system_router")
 
@@ -40,6 +40,11 @@ module PlaceOS::MQTT
     getter hierarchy : Array(String)
 
     def initialize(@publisher : Publisher = Publisher.instance, @hierarchy : String = DEFAULT_HIERARCHY)
+      super()
+    end
+
+    def process_resource(event) : Resource::Result
+      Resource::Result::Skipped
     end
 
     # Handle Updates to existing Zone tags

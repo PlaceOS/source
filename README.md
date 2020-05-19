@@ -1,6 +1,6 @@
 # PlaceOS MQTT Service
 
-MQTT Client for PlaceOS events
+MQTT Client service for PlaceOS
 
 ## Contributing
 
