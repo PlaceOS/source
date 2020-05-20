@@ -69,19 +69,22 @@ module PlaceOS::MQTT
 
     # Update safe fields on the `Publisher`'s `Broker`
     #
-    protected def update_publisher(broker : Model::Broker)
+    protected def update_publisher?(broker : Model::Broker)
       broker_id = broker.id.as(String)
 
-      write_publishers do |publishers|
+      success = write_publishers do |publishers|
         publisher = publishers[broker_id]?
         if publisher
           publisher.set_broker(broker)
-          Resource::Result::Success
+          true
         else
           Log.error { "missing existing publisher for Broker<#{broker_id}>" }
-          Resource::Result::Error
+          false
         end
       end
+
+      # Create the publisher if the update failed
+      success ? Resource::Result::Success : create_publisher(broker)
     end
 
     # Close and remove the `Publisher` for the `Broker`
