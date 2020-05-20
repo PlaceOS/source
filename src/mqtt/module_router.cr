@@ -8,13 +8,11 @@ module PlaceOS::MQTT
   # Module router...
   # - listens for changes to the Module's name and update mappings in SystemRouter
   # - publishes metadata
-  class ZoneRouter < Resource(Model::Module)
-    include PublishMetadata(Model::Module)
-
+  class ModuleRouter < Resource(Model::Module)
     private getter publisher_manager : PublisherManager
     private getter system_router : SystemRouter
 
-    delegate :scope, to: system_router
+    delegate :scope, to: SystemRouter
 
     def initialize(@system_router : SystemRouter, @publisher_manager : PublisherManager = PublisherManager.instance)
       super()

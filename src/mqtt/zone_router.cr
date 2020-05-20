@@ -14,14 +14,19 @@ module PlaceOS::MQTT
     private getter publisher_manager : PublisherManager
     private getter system_router : SystemRouter
 
-    delegate :scope, to: system_router
+    delegate :scope, to: SystemRouter
 
     def initialize(@system_router : SystemRouter, @publisher_manager : PublisherManager = PublisherManager.instance)
       super()
     end
 
     def process_resource(model) : Resource::Result
-      Resource::Result::Skipped
+      if model.tags_changed? || model.destroyed?
+        system_router.update_zone_mapping(model)
+        Resource::Result::Success
+      else
+        Resource::Result::Skipped
+      end
     end
   end
 end
