@@ -1,7 +1,7 @@
 require "models/module"
 
+require "./publisher_manager"
 require "./publish_metadata"
-require "./publisher"
 require "./resource"
 
 module PlaceOS::MQTT
@@ -11,12 +11,12 @@ module PlaceOS::MQTT
   class ZoneRouter < Resource(Model::Module)
     include PublishMetadata(Model::Module)
 
-    private getter publisher : Publisher
+    private getter publisher_manager : PublisherManager
     private getter system_router : SystemRouter
 
     delegate :scope, to: system_router
 
-    def initialize(@system_router : SystemRouter, @publisher : Publisher = Publisher.instance)
+    def initialize(@system_router : SystemRouter, @publisher_manager : PublisherManager = PublisherManager.instance)
       super()
     end
 

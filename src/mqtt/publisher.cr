@@ -1,3 +1,5 @@
+require "rwlock"
+require "file"
 require "mqtt/v3/client"
 
 module PlaceOS::MQTT
@@ -5,16 +7,49 @@ module PlaceOS::MQTT
   class Publisher
     Log = ::Log.for("mqtt.publisher")
 
-    record Metadata, scope : String, id : String, payload : String?
+    record Metadata, key : String, payload : String?
     record State, key : String, payload : String
-
     alias Message = State | Metadata
+
+    def self.metadata(scope : String, id : String, payload : String?)
+      Metadata.new(File.join(scope, id), payload)
+    end
+
+    def self.state(key : String, payload : String)
+      State.new(key, payload)
+    end
 
     getter message_queue : Channel(Message) = Channel(Message).new
 
     protected getter client : MQTT::V3::Client
 
-    def initialize(broker : Model::Broker)
+    private getter broker : Model::Broker
+    private getter broker_lock : RWLock = RWLock.new
+
+    def write_broker
+      broker_lock.write do
+        yield broker
+      end
+    end
+
+    def read_broker
+      broker_lock.read do
+        yield broker
+      end
+    end
+
+    def set_broker(broker : Model::Broker)
+      broker_lock.write do
+        @broker = broker
+      end
+    end
+
+    def initialize(@broker : Model::Broker)
+    end
+
+    def close
+      message_queue.close
+      client.close
     end
 
     # Create an authenticated MQTT client off metadata in the Broker
@@ -35,10 +70,6 @@ module PlaceOS::MQTT
           publish(message)
         end
       end
-    end
-
-    def publish_metadata(scope : String, id : String, payload : String?)
-      message_queue.send(Metadata.new(scope, id, payload))
     end
 
     protected def publish(message : Message)

@@ -1,10 +1,10 @@
-require "./broker_listener"
+require "./publisher_manager"
 require "./router"
 
 module PlaceOS::MQTT
   class Manager
     getter router : Router
-    getter broker_listener : BrokerListener
+    getter publisher_manager : PublisherManager
 
     getter? started = false
 
@@ -16,7 +16,7 @@ module PlaceOS::MQTT
 
     def initialize(
       @router : Router = Router.new,
-      @broker_listener : BrokerListener = BrokerListener.new
+      @publisher_manager : PublisherManager = PublisherManager.new
     )
     end
 
@@ -25,7 +25,7 @@ module PlaceOS::MQTT
       @started = true
 
       Log.info { "registering Brokers" }
-      broker_listener.start
+      publisher_manager.start
 
       Log.info { "routing table events" }
       router.start
@@ -35,7 +35,7 @@ module PlaceOS::MQTT
       return unless started?
 
       @started = false
-      broker_listener.stop
+      publisher_manager.stop
       router.stop
     end
   end

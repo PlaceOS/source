@@ -15,7 +15,7 @@ module PlaceOS::MQTT
     include PublishMetadata(Model::ControlSystem)
     Log = ::Log.for("mqtt.system_router")
 
-    private getter publisher : Publisher
+    private getter publisher_manager : PublisherManager
 
     alias ZoneMapping = Hash(String, String)
     @mappings : Hash(String, ZoneMapping) = {} of String => ZoneMapping
@@ -39,7 +39,7 @@ module PlaceOS::MQTT
     DEFAULT_HIERARCHY = ["org", "building", "level", "area"]
     getter hierarchy : Array(String)
 
-    def initialize(@publisher : Publisher = Publisher.instance, @hierarchy : String = DEFAULT_HIERARCHY)
+    def initialize(@publisher_manager : PublisherManager = PublisherManager.instance, @hierarchy : String = DEFAULT_HIERARCHY)
       super()
     end
 
