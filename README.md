@@ -2,13 +2,35 @@
 
 MQTT Client service for PlaceOS
 
-## Contributing
+## Design
 
-1. Fork it (<https://github.com/place-labs/mqtt/fork>)
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
+- `constants.cr`
+- `driver_router.cr`
+  + Publishes `Driver` models to the `metadata` topic (via `PublishMetadata`)
+- `manager.cr`
+  + Manages the application start-up
+- `module_events.cr`
+  + Listens to redis events and writes them to the `PublisherManager`
+  + Maintains a mapping of `module_id` to `driver_id`
+- `publish_metadata.cr`
+  + Module with a helper to Publish a model under the `metadata` key via `PublisherManager`
+- `publisher.cr`
+  + Abstraction over an MQTT client, writing to a broker specified by a `Model::Broker`
+  + Sanitizes data via `Model::Broker` filters
+  + Writes state events to `/<org>/state/..`
+  + Writes metadata events to `/<org>/metadata/..`
+- `publisher_manager.cr`
+  + Handles creation of `Publisher`s
+  + Broadcasts events across `Publisher`s
+- `resource.cr`
+  + Reexport of `PlaceOS::Core::Resource`
+- `system_router.cr`
+  + Publishes `ControlSystem` models to the `metadata` topic (via `PublishMetadata`)
+  + Maintains `control_system_id` to `ZoneMapping` mappings. For use in generating `state` keys.
+  + Maintains `module_id` to `Array(ModuleMapping)` mappings. For use in generating `state` keys.
+  + Maintains `module_id` to `driver_id` mappings. For use in generating `state` keys.
+- `zone_router.cr`
+  + Publishes `Zone` models to the `metadata` topic (via `PublishMetadata`)
 
 ## Contributors
 
