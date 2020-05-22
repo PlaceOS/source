@@ -17,6 +17,9 @@ dependencies:
     version: ~> 1
   mqtt:
     github: spider-gazelle/crystal-mqtt
+  redis:
+    github: stefanwille/crystal-redis
+    version: ~> 2.6
   rethinkdb-orm:
     github: spider-gazelle/rethinkdb-orm
   rwlock:

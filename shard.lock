@@ -6,7 +6,7 @@ shards:
 
   action-controller:
     github: spider-gazelle/action-controller
-    version: 3.1.0
+    version: 3.1.1
 
   active-model:
     github: spider-gazelle/active-model
@@ -86,7 +86,7 @@ shards:
 
   hound-dog:
     github: place-labs/hound-dog
-    version: 2.3.2
+    version: 2.4.0
 
   ipaddress:
     github: Sija/ipaddress.cr
@@ -102,7 +102,7 @@ shards:
 
   models:
     github: placeos/models
-    version: 1.1.0
+    version: 1.2.0
 
   mqtt:
     github: spider-gazelle/crystal-mqtt
@@ -162,7 +162,7 @@ shards:
 
   ssh2:
     github: spider-gazelle/ssh2.cr
-    version: 1.2.6
+    version: 1.3.1
 
   tasker:
     github: spider-gazelle/tasker

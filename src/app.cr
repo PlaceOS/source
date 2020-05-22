@@ -61,9 +61,8 @@ module PlaceOS::MQTT
     end
   end
 
-  # Start the client manager
-
-  ClientManager.instance.start
+  # Start application manager
+  PlaceOS::MQTT::Manager.instance.start
 
   # Server Configuration
 

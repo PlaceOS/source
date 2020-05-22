@@ -1,9 +1,16 @@
-require "./publisher_manager"
-require "./router"
+require "./mappings"
+require "./publishing/publisher_manager"
+require "./router/*"
 
 module PlaceOS::MQTT
   class Manager
-    getter router : Router
+    Log = ::Log.for("mqtt.manager")
+
+    getter control_system_router : Router::ControlSystem
+    getter driver_router : Router::Driver
+    getter module_router : Router::Module
+    getter zone_router : Router::Zone
+
     getter publisher_manager : PublisherManager
 
     getter? started = false
@@ -15,9 +22,13 @@ module PlaceOS::MQTT
     end
 
     def initialize(
-      @router : Router = Router.new,
-      @publisher_manager : PublisherManager = PublisherManager.new
+      @publisher_manager : PublisherManager = PublisherManager.new,
+      @mappings : Mappings = Mappings.new
     )
+      @control_system_router = Router::ControlSystem.new(mappings, publisher_manager)
+      @driver_router = Router::Driver.new(mappings, publisher_manager)
+      @module_router = Router::Module.new(mappings)
+      @zone_router = Router::Zone.new(mappings, publisher_manager)
     end
 
     def start
@@ -26,9 +37,14 @@ module PlaceOS::MQTT
 
       Log.info { "registering Brokers" }
       publisher_manager.start
-
-      Log.info { "routing table events" }
-      router.start
+      Log.info { "starting ControlSystem router" }
+      control_system_router.start
+      Log.info { "starting Driver router" }
+      driver_router.start
+      Log.info { "starting Module router" }
+      module_router.start
+      Log.info { "starting Zone router" }
+      zone_router.start
     end
 
     def stop
@@ -36,7 +52,10 @@ module PlaceOS::MQTT
 
       @started = false
       publisher_manager.stop
-      router.stop
+      control_system_router.stop
+      driver_router.stop
+      module_router.stop
+      zone_router.stop
     end
   end
 end

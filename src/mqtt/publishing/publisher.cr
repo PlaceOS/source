@@ -21,7 +21,7 @@ module PlaceOS::MQTT
 
     getter message_queue : Channel(Message) = Channel(Message).new
 
-    protected getter client : MQTT::V3::Client
+    protected getter client : ::MQTT::V3::Client
 
     private getter broker : Model::Broker
     private getter broker_lock : RWLock = RWLock.new
@@ -45,11 +45,13 @@ module PlaceOS::MQTT
     end
 
     def initialize(@broker : Model::Broker)
+      @client = Publisher.client(@broker)
     end
 
     def close
       message_queue.close
-      client.close
+      client.wait_close
+      client.disconnect
     end
 
     # Create an authenticated MQTT client off metadata in the Broker
@@ -57,11 +59,13 @@ module PlaceOS::MQTT
       # Create a transport (TCP, UDP, Websocket etc)
       tls = OpenSSL::SSL::Context::Client.new
       tls.verify_mode = OpenSSL::SSL::VerifyMode::NONE
-      transport = MQTT::Transport::TCP.new("test.mosquitto.org", 8883, tls)
+      transport = ::MQTT::Transport::TCP.new("test.mosquitto.org", 8883, tls)
 
       # Establish a MQTT connection
-      client = MQTT::V3::Client.new(transport)
+      client = ::MQTT::V3::Client.new(transport)
       client.connect
+
+      client
     end
 
     def consume_messages

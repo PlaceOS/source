@@ -1,2 +1,2 @@
 require "spec"
-require "../src/mqtt"
+require "../src/placeos-mqtt"

@@ -2,7 +2,7 @@ require "models/broker"
 require "rwlock"
 
 require "./publisher"
-require "./resource"
+require "../resource"
 
 module PlaceOS::MQTT
   # Create and maintain Publishers from Brokers
@@ -42,20 +42,15 @@ module PlaceOS::MQTT
         end
       when Resource::Action::Deleted
         remove_publisher(model)
-      end
+      end.as(Resource::Result)
     end
 
     # Attributes that can change without recreating the publisher
     SAFE_ATTRIBUTES = [:name, :description, :filters]
 
-    # Mapping from broker_id to an MQTT publisher
-    @publishers : Hash(String, Publisher) = {} of String => Publisher
-
-    private getter publishers_lock : RWLock = RWLock.new
-
     # Create a `Publisher` for the `Broker`
     #
-    protected def create_publisher(broker : Model::Broker)
+    protected def create_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
       publisher = Publisher.new(broker)
       write_publishers do |publishers|
@@ -64,12 +59,13 @@ module PlaceOS::MQTT
         existing.close unless existing.nil?
         publishers[broker_id] = publisher
       end
+
       Resource::Result::Success
     end
 
     # Update safe fields on the `Publisher`'s `Broker`
     #
-    protected def update_publisher?(broker : Model::Broker)
+    protected def update_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
 
       success = write_publishers do |publishers|
@@ -89,19 +85,25 @@ module PlaceOS::MQTT
 
     # Close and remove the `Publisher` for the `Broker`
     #
-    protected def remove_publisher(model : Model::Broker)
+    private def remove_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
       existing = write_publishers do |publishers|
         publishers.delete(broker_id)
       end
-      existing.close unless exisiting.nil?
+
+      existing.close unless existing.nil?
 
       Resource::Result::Success
     end
 
+    # Mapping from broker_id to an MQTT publisher
+    @publishers : Hash(String, Publisher) = {} of String => Publisher
+
+    private getter publishers_lock : RWLock = RWLock.new
+
     # Synchronized read access
     #
-    protected def read_publishers
+    private def read_publishers
       publishers_lock.read do
         yield @publishers
       end
@@ -109,8 +111,8 @@ module PlaceOS::MQTT
 
     # Synchronized write access
     #
-    protected def write_publishers
-      publishers_locker.write do
+    private def write_publishers
+      publishers_lock.write do
         yield @publishers
       end
     end

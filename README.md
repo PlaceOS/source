@@ -9,8 +9,10 @@ MQTT Client service for PlaceOS
   + Publishes `Driver` models to the `metadata` topic (via `PublishMetadata`)
 - `manager.cr`
   + Manages the application start-up
-- `module_events.cr`
-  + Listens to redis events and writes them to the `PublisherManager`
+- `status_events.cr`
+  + Listens for redis events via a pattern subscription
+  + Parses events, gets topic keys and writes the events to `PublisherManager`
+- `module_router.cr`
   + Maintains a mapping of `module_id` to `driver_id`
 - `publish_metadata.cr`
   + Module with a helper to Publish a model under the `metadata` key via `PublisherManager`
