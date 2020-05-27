@@ -26,6 +26,15 @@ module PlaceOS::MQTT::Router
       super()
     end
 
+    def handle_create(control_system : Model::ControlSystem)
+    end
+
+    def handle_update(control_system : Model::ControlSystem)
+    end
+
+    def handle_delete(control_system : Model::ControlSystem)
+    end
+
     def process_resource(event) : Resource::Result
       system = event[:resource]
 
@@ -38,11 +47,12 @@ module PlaceOS::MQTT::Router
 
       case event[:action]
       when Resource::Action::Created
+        handle_create(system)
       when Resource::Action::Updated
+        handle_update(system)
       when Resource::Action::Deleted
-      end
-
-      Resource::Result::Skipped
+        handle_delete(system)
+      end.as(Resource::Result)
     end
 
     def self.system_zone_mapping(zone_id : String, zone_tags : Array(String), mapping : ZoneMapping? = nil, destroyed : Bool = false)

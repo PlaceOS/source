@@ -7,7 +7,7 @@ require "../resource"
 
 module PlaceOS::MQTT::Router
   # Driver router...
-  # - listens for changes to the Driver, creating / removing DriverMappings
+  # - removes driver mapping if driver removed
   # - publishes metadata (if correctly scoped)
   class Driver < Resource(Model::Driver)
     include PublishMetadata(Model::Driver)
@@ -22,7 +22,6 @@ module PlaceOS::MQTT::Router
       super()
     end
 
-    # TODO: Cleanup the driver_id -> module_id mapping on delete
     def process_resource(event) : Resource::Result
       action = event[:action]
       driver = event[:resource]

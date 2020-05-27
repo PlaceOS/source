@@ -7,9 +7,9 @@ require "../publishing/publisher_manager"
 require "../resource"
 
 module PlaceOS::MQTT::Router
-  # Zone router...
+  # Zone router (if scoped)...
   # - listens for changes to Zone's tags and update zone_mappings in Mappings
-  # - publishes metadata (if correctly scoped)
+  # - publishes metadata
   #
   # A Zone _SHOULD NOT_ have more than one hierarchical tag
   class Zone < Resource(Model::Zone)
@@ -25,13 +25,9 @@ module PlaceOS::MQTT::Router
       super()
     end
 
-    # Create
-    # - cache tag (if scoped)
     # Update
-    # - cache tag (if scoped)
     # - update system zone mappings
     # Delete
-    # - remove tags
     # - remove system zone mappings
     #
     # Publish zone if is scope or under scope
@@ -46,24 +42,12 @@ module PlaceOS::MQTT::Router
         publish_metadata(parent_zone, zone)
       end
 
-      case event[:action]
-      when Resource::Action::Created
-      when Resource::Action::Updated
-      when Resource::Action::Deleted
-      end
-
-      # Update/create zone mappings
+      # Update/destroy Zone mappings
       if zone.tags_changed? || zone.destroyed?
-        # TODO
+        update_zone_mapping(zone)
+      else
+        Resource::Result::Success
       end
-
-      Resource::Result::Error
-    end
-
-    def create_zone_mapping(zone : Model::Zone)
-    end
-
-    def delete_zone_mapping(zone : Model::Zone)
     end
 
     # Handle Updates to existing Zone tags
@@ -73,37 +57,17 @@ module PlaceOS::MQTT::Router
       # Find tags from hierarchy
       zone_tags = zone.tag_list & HIERARCHY
       # Ignore zone if tags do not fall in the hierarchy
-      return if zone_tags.empty?
+      return Resource::Result::Skipped if zone_tags.empty?
 
       destroyed = zone.destroyed?
 
       mappings.write do |state|
-        state.zone_mappings
-      end
-
-      mappings.write_zone_mappings do |zone_mappings|
-        zone_mappings.transform_values! do |mapping|
+        state.zone_mappings.transform_values! do |mapping|
           Mappings.zone_mapping(zone_id, zone_tags, mapping, destroyed)
         end
       end
-    end
 
-    def self.should_publish?(zone : Model::Zone)
-      # Check if the zone is a scope or under a scope
-      parent_id = model.parent_id
-      if parent_id.nil?
-        if model.tags.try &.includes?(scope)
-          # Zone is a scope
-          publish_metadata(model.id.as(String), model)
-        else
-        end
-      else
-        mappings.zone_tags[model.parent]
-        model.parent.tags.try &.includes?(scope)
-      end
-    end
-
-    def self.scope(zone : Model::Zone) : String?
+      Resource::Result::Success
     end
   end
 end
