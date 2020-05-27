@@ -16,6 +16,9 @@ module PlaceOS::MQTT
 
     class_getter scope : String = HIERARCHY.first? || abort "Hierarchy must contain at least one scope"
 
+    # Status Keys
+    ###########################################################################
+
     # Generates topic keys if event is to be published.
     #
     # Keys are in the format below.
@@ -23,8 +26,8 @@ module PlaceOS::MQTT
     def state_event_keys?(module_id : String, status : String) : Array(String)?
       read do |state|
         # Check if module is in any relevant ControlSystems
-        module_system_mappings = state.module_systems[module_id]?
-        if module_system_mappings.nil?
+        system_modules = state.system_modules[module_id]?
+        if system_modules.nil?
           Log.debug { "no mapped systems for Module<#{module_id}>" }
           return
         end
@@ -36,14 +39,7 @@ module PlaceOS::MQTT
           return
         end
 
-        # Look up module's name
-        module_name = state.module_names[module_id]?
-        if module_name.nil?
-          Log.warn { "missing name for Module<#{module_id}>" }
-          return
-        end
-
-        module_system_mappings.compact_map do |system_mapping|
+        system_modules.compact_map do |system_mapping|
           control_system_id = system_mapping[:control_system_id]
           # Lookup hierarchical Zones for the system
           zone_mapping = state.zone_mappings[control_system_id]?
@@ -51,7 +47,7 @@ module PlaceOS::MQTT
             key_data = {
               status:            status,
               index:             system_module_mapping[:index],
-              module_name:       module_name,
+              module_name:       system_module_mapping[:name],
               driver_id:         driver_id,
               control_system_id: control_system_id,
               zone_mapping:      zone_mapping,
@@ -94,48 +90,79 @@ module PlaceOS::MQTT
       "/#{scope_value}/state/#{File.join(subhierarchy_values)}/#{module_key}"
     end
 
-    # Scoping
+    # Hierarchy and Scoping
     ###########################################################################
 
-    alias Scoped = Model::Zone | Model::ControlSystem | Model::Driver | Model::Module
+    alias Scoped = Model::ControlSystem | Model::Driver | Model::Module | Model::Zone
 
-    def scope?(model : Scoped) : String?
+    # Always check DB when looking up scope.
+    #
+    # Caches are only for quick lookups when processing events.
+    def hierarchy_zones(model : Scoped) : Array(Zone)
       case model
       when Model::ControlSystem
-        # Check ZoneMappings
+        Model::Zones
+          .find_all(model.zones.as(Array(String)))
+          .reject { |zone| hierarchy_tag?(zone).nil? }
       when Model::Driver
-        # Check if there's a Driver mapping
-        # i.e. driver to module mapping
-        # if there isn't drop it
-        # when creating the first driver mapping then we should fire a process resource on the driver side
-        # That way it will publish the metadata
+        Model::Module
+          .by_driver_id(model.id.as(String))
+          .flat_map { |mod| scope(mod) }
+          .uniq
       when Model::Module
-        # Search system module mappings
+        Model::ControlSystem
+          .by_module_id(model.id.as(String))
+          .flat_map { |cs| scope(cs) }
+          .uniq
       when Model::Zone
-        # Check if model has any hierarchy tags
+        zone = model.parent || model
+        if hierarchy_tag?(zone) == Mappings.scope
+          [zone]
+        else
+          [] of Zone
+        end
+      end
+    end
+
+    def self.hierarchy_tag?(zone : Model::Zone) : String?
+      hierarchy_tags = zone.tag.as(Array(String)) & HIERARCHY
+      # TODO: Error if more than one matching hierarchy tag
+      hierarchy_tags.first?
+    end
+
+    # System Modules
+    ###########################################################################
+
+    def merge_system_modules(control_system_id : String, system_modules : Hash(String, SystemModule))
+      write_state do |state|
+        # Clear mappings of all references to control_system_id
+        state.system_modules.transform_values do |mappings|
+          mappings.reject! { |sys_mod| sys_mod[:control_system_id] == control_system_id }
+        end
+
+        system_modules.each do |mapping|
+          mapping.each do |module_id, new_mapping|
+            state.system_modules[module_id] << new_mapping
+          end
+        end
       end
     end
 
     # Mappings
     ###########################################################################
 
-    alias SystemModuleMapping = NamedTuple(control_system_id: String, index: Int32)
+    alias SystemModule = NamedTuple(name: String, control_system_id: String, index: Int32)
 
     # Wrapper for Mapping state
     class State
       # module_id => [{control_system_id: String, index: Int32}]
-      getter module_system_mappings : Hash(String, Array(SystemModuleMapping)) = Hash(String, Array(SystemModuleMapping)).new { [] of SystemModuleMapping }
-      # module_id => module_name
-      getter module_names : Hash(String, String) = {} of String => String
+      getter system_modules : Hash(String, Array(SystemModule)) = Hash(String, Array(SystemModule)).new { [] of SystemModule }
 
       # module_id => driver_id
-      getter driver_mappings : Hash(String, String) = {} of String => String
+      getter driver : Hash(String, String) = {} of String => String
 
       # control_system_id => { hierarchy_tag => zone_id }
-      getter system_zone_mappings : Hash(String, Hash(String, String)) = {} of String => Hash(String, String)
-
-      # zone_id => tags
-      getter zone_tags : Hash(String, Array(String)) = {} of String => Array(String)
+      getter system_zones : Hash(String, Hash(String, String)) = {} of String => Hash(String, String)
     end
 
     @state : State = State.new

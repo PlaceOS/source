@@ -37,14 +37,22 @@ module PlaceOS::MQTT
 
       Log.info { "registering Brokers" }
       publisher_manager.start
-      Log.info { "starting ControlSystem router" }
-      control_system_router.start
-      Log.info { "starting Driver router" }
-      driver_router.start
-      Log.info { "starting Module router" }
-      module_router.start
+
+      # Acquire the Zones (hierarchy) first
       Log.info { "starting Zone router" }
       zone_router.start
+
+      # Map ControlSystems beneath Zones
+      Log.info { "starting ControlSystem router" }
+      control_system_router.start
+
+      # Map to driver_ids and module_names
+      Log.info { "starting Module router" }
+      module_router.start
+
+      # Publish any relevant driver metadata
+      Log.info { "starting Driver router" }
+      driver_router.start
     end
 
     def stop

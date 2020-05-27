@@ -16,20 +16,32 @@ module PlaceOS::MQTT::Router
     private getter mappings : Mappings
     private getter publisher_manager : PublisherManager
 
-    # TODO:
-    # - Ignore publishing driver metadata when no modules scoped
-    # - Retroactively publish metadata if module (driver) is scoped
-
     delegate :scope, to: Mappings
 
     def initialize(@mappings : Mappings, @publisher_manager : PublisherManager = PublisherManager.instance)
       super()
     end
 
-    def process_resource(model) : Resource::Result
-      # TODO: Cleanup the driver_id -> module_id mapping on delete (in SystemRouter)
-      # TODO: Check driver is in scope before publishing metadata
-      # publish_metadata(scope, model)
+    # TODO: Cleanup the driver_id -> module_id mapping on delete
+    def process_resource(event) : Resource::Result
+      action = event[:action]
+      driver = event[:resource]
+      driver_id = driver.id.as(String)
+
+      hierarchy_zones = Mappings.hierarchy_zones(driver)
+      return Resource::Result::Skipped if hierarchy_zones.empty?
+
+      hierarchy_zones.each do |zone|
+        publish_metadata(zone, driver)
+      end
+
+      if action == Resource::Action::Deleted
+        mappings.write do |state|
+          # Remove references to this Driver
+          state.drivers.reject! { |_, id| id == driver_id }
+        end
+      end
+
       Resource::Result::Error
     end
   end

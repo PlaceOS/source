@@ -10,6 +10,8 @@ module PlaceOS::MQTT::Router
   # Zone router...
   # - listens for changes to Zone's tags and update zone_mappings in Mappings
   # - publishes metadata (if correctly scoped)
+  #
+  # A Zone _SHOULD NOT_ have more than one hierarchical tag
   class Zone < Resource(Model::Zone)
     include PublishMetadata(Model::Zone)
     Log = ::Log.for("mqtt.router.zone")
@@ -23,12 +25,26 @@ module PlaceOS::MQTT::Router
       super()
     end
 
-    # If it's a zone Create, cache tags
-    # If it's an Update, cache tags + check if the mappings needs to be update
+    # Create
+    # - cache tag (if scoped)
+    # Update
+    # - cache tag (if scoped)
+    # - update system zone mappings
+    # Delete
+    # - remove tags
+    # - remove system zone mappings
+    #
     # Publish zone if is scope or under scope
 
     def process_resource(event) : Resource::Result
       zone = event[:resource]
+
+      hierarchy_zones = Mappings.hierarchy_zones(zone)
+      return Resource::Result::Skipped if hierarchy_zones.empty?
+
+      hierarchy_zones.each do |parent_zone|
+        publish_metadata(parent_zone, zone)
+      end
 
       case event[:action]
       when Resource::Action::Created
@@ -44,6 +60,12 @@ module PlaceOS::MQTT::Router
       Resource::Result::Error
     end
 
+    def create_zone_mapping(zone : Model::Zone)
+    end
+
+    def delete_zone_mapping(zone : Model::Zone)
+    end
+
     # Handle Updates to existing Zone tags
     #
     def update_zone_mapping(zone : Model::Zone)
@@ -54,6 +76,10 @@ module PlaceOS::MQTT::Router
       return if zone_tags.empty?
 
       destroyed = zone.destroyed?
+
+      mappings.write do |state|
+        state.zone_mappings
+      end
 
       mappings.write_zone_mappings do |zone_mappings|
         zone_mappings.transform_values! do |mapping|
