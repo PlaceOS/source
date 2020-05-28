@@ -29,21 +29,25 @@ module PlaceOS::MQTT::Router
 
     # - Create a system_zones mapping
     # - Create a system_modules mapping
-    def handle_create(control_system : PlaceOS::Model::ControlSystem)
+    def handle_create(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
       zone_mappings(control_system)
       module_mappings(control_system)
+
+      Resource::Result::Success
     end
 
     # - Create a system_zones mapping if zones have changed
     # - Update system_modules mapping if modules have changed
-    def handle_update(control_system : PlaceOS::Model::ControlSystem)
+    def handle_update(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
       zone_mappings(control_system) if control_system.zones_changed?
       module_mappings(control_system) if control_system.modules_changed?
+
+      Resource::Result::Success
     end
 
     # - Remove system_modules references to ControlSystem
     # - Remove system_zones for ControlSystem
-    def handle_delete(control_system : PlaceOS::Model::ControlSystem)
+    def handle_delete(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
       control_system_id = control_system.id.as(String)
 
       mappings.write do |state|
@@ -51,6 +55,8 @@ module PlaceOS::MQTT::Router
       end
 
       mappings.remove_system_modules(control_system_id)
+
+      Resource::Result::Success
     end
 
     def process_resource(event) : Resource::Result
@@ -86,26 +92,20 @@ module PlaceOS::MQTT::Router
 
     # Create/update mappings for ControlSystem's Modules
     def module_mappings(control_system : PlaceOS::Model::ControlSystem)
-      systems_module_mappings = Router::ControlSystem.systems_module_mappings(control_system)
+      system_module_mappings = Router::ControlSystem.system_modules(control_system)
 
-      mappings.set_system_modules(control_system.id.as(String), systems_module_mappings)
+      mappings.set_system_modules(control_system.id.as(String), system_module_mappings)
 
-      systems_module_mappings
+      system_module_mappings
     end
 
     def self.system_zones(control_system : PlaceOS::Model::ControlSystem) : Hash(String, String)
       # Look up zones
       zone_list = control_system.zones
-
-      # TODO: Put this logic into RethinkORM #get_all
-      zones = if zone_list.nil? || zone_list.empty?
-                [] of PlaceOS::Model::Zone
-              else
-                PlaceOS::Model::Zone.get_all(zone_list)
-              end
+      return {} of String => String if zone_list.nil? || zone_list.empty?
 
       # Generate zone mappings
-      zone_mappings = zones.compact_map do |zone|
+      zone_mappings = PlaceOS::Model::Zone.get_all(zone_list).compact_map do |zone|
         tag = Mappings.hierarchy_tag?(zone)
         Mappings.zone_mapping(zone.id.as(String), tag) unless tag.nil?
       end
@@ -117,7 +117,7 @@ module PlaceOS::MQTT::Router
     end
 
     # Map from `module_id` => {control_system_id: String, name: String, index: Int32}
-    def self.system_modules(control_system : PlaceOS::Model::ControlSystem) : Hash(String, Mapping::SystemModule)
+    def self.system_modules(control_system : PlaceOS::Model::ControlSystem) : Hash(String, Mappings::SystemModule)
       module_ids = control_system.modules
       control_system_id = control_system.id.as(String)
 

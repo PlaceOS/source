@@ -29,7 +29,7 @@ module PlaceOS::MQTT::Router
       # Update all `system_mappings` if Module's `custom_name` changed.
       if mod.custom_name_changed?
         # Update the `system_module` entry for each ControlSystem that has a reference to the Module
-        ControlSystem.by_module_id(module_id).each do |cs|
+        Model::ControlSystem.by_module_id(module_id).each do |cs|
           mappings.set_system_modules(cs.id.as(String), Router::ControlSystem.system_modules(cs))
         end
       end

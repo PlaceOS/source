@@ -128,7 +128,7 @@ module PlaceOS::MQTT
     end
 
     def self.hierarchy_tag?(zone : Model::Zone) : String?
-      hierarchy_tags = zone.tags.as(Array(String)) & HIERARCHY
+      hierarchy_tags = zone.tags.as(Set(String)) & HIERARCHY
 
       if hierarchy_tags.size > 1
         Log.error { "Zone<#{zone.id}> has more than one hierarchy tag: #{hierarchy_tags}" }
@@ -166,10 +166,8 @@ module PlaceOS::MQTT
         # Clear mappings of all references to control_system_id
         remove_system_modules(control_system_id)
 
-        system_modules.each do |mapping|
-          mapping.each do |module_id, new_mapping|
-            state.system_modules[module_id] << new_mapping
-          end
+        system_modules.each do |module_id, new_mapping|
+          state.system_modules[module_id] << new_mapping
         end
       end
     end
@@ -196,7 +194,7 @@ module PlaceOS::MQTT
       getter system_modules : Hash(String, Array(SystemModule)) = Hash(String, Array(SystemModule)).new { [] of SystemModule }
 
       # module_id => driver_id
-      getter driver : Hash(String, String) = {} of String => String
+      getter drivers : Hash(String, String) = {} of String => String
 
       # control_system_id => { hierarchy_tag => zone_id }
       getter system_zones : Hash(String, Hash(String, String)) = {} of String => Hash(String, String)
