@@ -8,12 +8,13 @@ require "../resource"
 
 module PlaceOS::MQTT::Router
   # Zone router (if scoped)...
-  # - listens for changes to Zone's tags and update zone_mappings in Mappings
+  # - listens for changes to Zone's tags and update system_zones in Mappings
   # - publishes metadata
+  # Note: SystemRouter handles creation of system_zones
   #
   # A Zone _SHOULD NOT_ have more than one hierarchical tag
-  class Zone < Resource(Model::Zone)
-    include PublishMetadata(Model::Zone)
+  class Zone < Resource(PlaceOS::Model::Zone)
+    include PublishMetadata(PlaceOS::Model::Zone)
     Log = ::Log.for("mqtt.router.zone")
 
     private getter mappings : Mappings
@@ -31,7 +32,6 @@ module PlaceOS::MQTT::Router
     # - remove system zone mappings
     #
     # Publish zone if is scope or under scope
-
     def process_resource(event) : Resource::Result
       zone = event[:resource]
 
@@ -52,18 +52,17 @@ module PlaceOS::MQTT::Router
 
     # Handle Updates to existing Zone tags
     #
-    def update_zone_mapping(zone : Model::Zone)
-      zone_id = zone.id.as(String)
-      # Find tags from hierarchy
-      zone_tags = zone.tag_list & HIERARCHY
+    def update_zone_mapping(zone : PlaceOS::Model::Zone)
+      zone_tag = Mappings.hierarchy_tag?(zone)
       # Ignore zone if tags do not fall in the hierarchy
-      return Resource::Result::Skipped if zone_tags.empty?
+      return Resource::Result::Skipped if zone_tag.nil?
 
+      zone_id = zone.id.as(String)
       destroyed = zone.destroyed?
 
       mappings.write do |state|
-        state.zone_mappings.transform_values! do |mapping|
-          Mappings.zone_mapping(zone_id, zone_tags, mapping, destroyed)
+        state.system_zones.transform_values! do |mapping|
+          Mappings.zone_mapping(zone_id, zone_tag, mapping, destroyed)
         end
       end
 

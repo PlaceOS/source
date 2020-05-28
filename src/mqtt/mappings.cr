@@ -42,7 +42,7 @@ module PlaceOS::MQTT
         system_modules.compact_map do |system_mapping|
           control_system_id = system_mapping[:control_system_id]
           # Lookup hierarchical Zones for the system
-          zone_mapping = state.zone_mappings[control_system_id]?
+          zone_mapping = state.system_zones[control_system_id]?
           if zone_mapping
             key_data = {
               status:            status,
@@ -72,7 +72,7 @@ module PlaceOS::MQTT
       module_name : String,
       driver_id : String,
       control_system_id : String,
-      zone_mapping : ZoneMapping
+      zone_mapping : Hash(String, String)
     ) : String?
       # Look up zone or replace with _ if not present
       hierarchy_values = HIERARCHY.map { |key| zone_mapping[key]? || "_" }
@@ -98,52 +98,89 @@ module PlaceOS::MQTT
     # Always check DB when looking up scope.
     #
     # Caches are only for quick lookups when processing events.
-    def hierarchy_zones(model : Scoped) : Array(Zone)
+    def self.hierarchy_zones(model : Scoped) : Array(Model::Zone)
       case model
       when Model::ControlSystem
-        Model::Zones
+        Model::Zone
           .find_all(model.zones.as(Array(String)))
           .reject { |zone| hierarchy_tag?(zone).nil? }
+          .to_a
       when Model::Driver
         Model::Module
           .by_driver_id(model.id.as(String))
-          .flat_map { |mod| scope(mod) }
+          .flat_map { |mod| hierarchy_zones(mod) }
           .uniq
+          .to_a
       when Model::Module
         Model::ControlSystem
           .by_module_id(model.id.as(String))
-          .flat_map { |cs| scope(cs) }
+          .flat_map { |cs| hierarchy_zones(cs) }
           .uniq
+          .to_a
       when Model::Zone
         zone = model.parent || model
         if hierarchy_tag?(zone) == Mappings.scope
           [zone]
         else
-          [] of Zone
+          [] of Model::Zone
         end
-      end
+      end.as(Array(Model::Zone))
     end
 
     def self.hierarchy_tag?(zone : Model::Zone) : String?
-      hierarchy_tags = zone.tag.as(Array(String)) & HIERARCHY
-      # TODO: Error if more than one matching hierarchy tag
+      hierarchy_tags = zone.tags.as(Array(String)) & HIERARCHY
+
+      if hierarchy_tags.size > 1
+        Log.error { "Zone<#{zone.id}> has more than one hierarchy tag: #{hierarchy_tags}" }
+      end
+
       hierarchy_tags.first?
+    end
+
+    # System Zones
+    ###########################################################################
+
+    # Update tags for a Zone
+    # Set `mapping` to update existing mappings
+    def self.zone_mapping(zone_id : String, zone_tag : String, mapping : Hash(String, String)? = nil, destroyed : Bool = false)
+      mapping = {} of String => String if mapping.nil?
+
+      # Remove stale zone tags
+      existing_tag = mapping.key_for?(zone_id)
+      unless existing_tag.nil?
+        mapping.delete(existing_tag) if destroyed || existing_tag != zone_tag
+      end
+
+      # Update zone mapping with new zone tags
+      mapping[zone_tag] = zone_id unless destroyed
+
+      mapping
     end
 
     # System Modules
     ###########################################################################
 
-    def merge_system_modules(control_system_id : String, system_modules : Hash(String, SystemModule))
-      write_state do |state|
+    # Update System Module mappings
+    def set_system_modules(control_system_id : String, system_modules : Hash(String, SystemModule))
+      write do |state|
         # Clear mappings of all references to control_system_id
-        state.system_modules.transform_values do |mappings|
-          mappings.reject! { |sys_mod| sys_mod[:control_system_id] == control_system_id }
-        end
+        remove_system_modules(control_system_id)
 
         system_modules.each do |mapping|
           mapping.each do |module_id, new_mapping|
             state.system_modules[module_id] << new_mapping
           end
+        end
+      end
+    end
+
+    # Remove System Module Mappings
+    def remove_system_modules(control_system_id : String)
+      # Clear mappings of all references to control_system_id
+      write do |state|
+        # Clear mappings of all references to control_system_id
+        state.system_modules.transform_values do |mappings|
+          mappings.reject! { |sys_mod| sys_mod[:control_system_id] == control_system_id }
         end
       end
     end
@@ -166,6 +203,8 @@ module PlaceOS::MQTT
     end
 
     @state : State = State.new
+
+    private getter mappings_lock : RWLock = RWLock.new
 
     # Synchronized read access to `Mappings`
     def read

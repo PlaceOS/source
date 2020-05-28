@@ -1,9 +1,9 @@
 require "models/control_system"
+require "models/zone"
 
-require "../constants"
 require "../mappings"
 require "../publishing/publish_metadata"
-require "../publishing/publisher"
+require "../publishing/publisher_manager"
 require "../resource"
 
 module PlaceOS::MQTT::Router
@@ -13,8 +13,9 @@ module PlaceOS::MQTT::Router
   #   + updates system_zones
   # - Listens for changes to the `modules` array
   #   + updates system_modules
-  class ControlSystem < Resource(Model::ControlSystem)
-    include PublishMetadata(Model::ControlSystem)
+  # - Remove references to ControlSystem on destroy
+  class ControlSystem < Resource(PlaceOS::Model::ControlSystem)
+    include PublishMetadata(PlaceOS::Model::ControlSystem)
     Log = ::Log.for("mqtt.router.control_system")
 
     private getter mappings : Mappings
@@ -26,86 +27,105 @@ module PlaceOS::MQTT::Router
       super()
     end
 
-    def handle_create(control_system : Model::ControlSystem)
+    # - Create a system_zones mapping
+    # - Create a system_modules mapping
+    def handle_create(control_system : PlaceOS::Model::ControlSystem)
+      zone_mappings(control_system)
+      module_mappings(control_system)
     end
 
-    def handle_update(control_system : Model::ControlSystem)
+    # - Create a system_zones mapping if zones have changed
+    # - Update system_modules mapping if modules have changed
+    def handle_update(control_system : PlaceOS::Model::ControlSystem)
+      zone_mappings(control_system) if control_system.zones_changed?
+      module_mappings(control_system) if control_system.modules_changed?
     end
 
-    def handle_delete(control_system : Model::ControlSystem)
+    # - Remove system_modules references to ControlSystem
+    # - Remove system_zones for ControlSystem
+    def handle_delete(control_system : PlaceOS::Model::ControlSystem)
+      control_system_id = control_system.id.as(String)
+
+      mappings.write do |state|
+        state.system_zones.delete(control_system_id)
+      end
+
+      mappings.remove_system_modules(control_system_id)
     end
 
     def process_resource(event) : Resource::Result
-      system = event[:resource]
+      control_system = event[:resource]
 
-      hierarchy_zones = Mappings.hierarchy_zones(system)
+      hierarchy_zones = Mappings.hierarchy_zones(control_system)
       return Resource::Result::Skipped if hierarchy_zones.empty?
 
       hierarchy_zones.each do |zone|
-        publish_metadata(zone, system)
+        publish_metadata(zone, control_system)
       end
 
       case event[:action]
       when Resource::Action::Created
-        handle_create(system)
+        handle_create(control_system)
       when Resource::Action::Updated
-        handle_update(system)
+        handle_update(control_system)
       when Resource::Action::Deleted
-        handle_delete(system)
+        handle_delete(control_system)
       end.as(Resource::Result)
     end
 
-    def self.system_zone_mapping(zone_id : String, zone_tags : Array(String), mapping : ZoneMapping? = nil, destroyed : Bool = false)
-      mapping = {} of String => String if mapping.nil?
+    # Create/update a mapping for ControlSystem's Zones
+    def zone_mappings(control_system : PlaceOS::Model::ControlSystem)
+      system_zone_mappings = Router::ControlSystem.system_zones(control_system)
 
-      # Remove stale zone tags
-      mapping.delete_if? { |tag, id| id == zone_id && (destroyed || !tag.in?(zone_tags)) }
-
-      unless destroyed
-        # Update ZoneMapping with new zone tags
-        zone_tags.each { |tag| mapping[tag] = zone_id }
+      mappings.write do |state|
+        state.system_zones[control_system.id.as(String)] = system_zone_mappings
       end
 
-      mapping
+      system_zone_mappings
     end
 
-    def self.create_system_zone_mapping(
-      system : Model::System
-    ) : Hash(String, String)
+    # Create/update mappings for ControlSystem's Modules
+    def module_mappings(control_system : PlaceOS::Model::ControlSystem)
+      systems_module_mappings = Router::ControlSystem.systems_module_mappings(control_system)
+
+      mappings.set_system_modules(control_system.id.as(String), systems_module_mappings)
+
+      systems_module_mappings
+    end
+
+    def self.system_zones(control_system : PlaceOS::Model::ControlSystem) : Hash(String, String)
       # Look up zones
-      zone_list = system.zones
+      zone_list = control_system.zones
 
       # TODO: Put this logic into RethinkORM #get_all
       zones = if zone_list.nil? || zone_list.empty?
-                [] of Model::Zone
+                [] of PlaceOS::Model::Zone
               else
-                Model::Zones.get_all(zone_list)
+                PlaceOS::Model::Zone.get_all(zone_list)
               end
 
       # Generate zone mappings
       zone_mappings = zones.compact_map do |zone|
-        zone_id = zone.id.as(String)
-        # Find tags from hierarchy
-        zone_tags = zone.tag_list & HIERARCHY
-        system_zone_mapping(zone_id, zone_tags) unless zone_tags.empty?
+        tag = Mappings.hierarchy_tag?(zone)
+        Mappings.zone_mapping(zone.id.as(String), tag) unless tag.nil?
       end
 
-      # Merge individual zone_mappings into a single ZoneMapping hash
+      # Merge individual zone_mappings into a single zone mapping hash
       zone_mappings.reduce({} of String => String) do |acc, mapping|
         acc.merge!(mapping)
       end
     end
 
     # Map from `module_id` => {control_system_id: String, name: String, index: Int32}
-    def self.system_modules(system : Model::System) : Hash(String, Mapping::SystemModule)
-      module_ids = system.module
-      control_system_id = system.id.as(String)
+    def self.system_modules(control_system : PlaceOS::Model::ControlSystem) : Hash(String, Mapping::SystemModule)
+      module_ids = control_system.modules
+      control_system_id = control_system.id.as(String)
 
       return {} of String => Mappings::SystemModule if module_ids.nil? || module_ids.empty?
 
       # module_name => [module_id]
       # Order module_ids, grouped by resolved name
-      grouped = Model::Module
+      grouped = PlaceOS::Model::Module
         .find_all(module_ids)
         .each_with_object(Hash(String, Array(String)).new([] of String)) { |mod, mapping|
           mapping[mod.resolved_name.as(String)] << mod.id.as(String)
