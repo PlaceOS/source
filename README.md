@@ -2,37 +2,32 @@
 
 MQTT Client service for PlaceOS
 
-## Design
+[![Build Status](https://travis-ci.com/placeos/mqtt.svg?branch=master)](https://travis-ci.com/placeos/mqtt)
 
-- `constants.cr`
-- `driver_router.cr`
-  + Publishes `Driver` models to the `metadata` topic (via `PublishMetadata`)
-- `manager.cr`
-  + Manages the application start-up
-- `status_events.cr`
-  + Listens for redis events via a pattern subscription
-  + Parses events, gets topic keys and writes the events to `PublisherManager`
-- `module_router.cr`
-  + Maintains a mapping of `module_id` to `driver_id`
-- `publish_metadata.cr`
-  + Module with a helper to Publish a model under the `metadata` key via `PublisherManager`
-- `publisher.cr`
-  + Abstraction over an MQTT client, writing to a broker specified by a `Model::Broker`
-  + Sanitizes data via `Model::Broker` filters
-  + Writes state events to `/<org>/state/..`
-  + Writes metadata events to `/<org>/metadata/..`
-- `publisher_manager.cr`
-  + Handles creation of `Publisher`s
-  + Broadcasts events across `Publisher`s
-- `resource.cr`
-  + Reexport of `PlaceOS::Core::Resource`
-- `system_router.cr`
-  + Publishes `ControlSystem` models to the `metadata` topic (via `PublishMetadata`)
-  + Maintains `control_system_id` to `ZoneMapping` mappings. For use in generating `state` keys.
-  + Maintains `module_id` to `Array(ModuleMapping)` mappings. For use in generating `state` keys.
-  + Maintains `module_id` to `driver_id` mappings. For use in generating `state` keys.
-- `zone_router.cr`
-  + Publishes `Zone` models to the `metadata` topic (via `PublishMetadata`)
+## Implmentation
+
+Arbitrary hierarchies can be defined via the `PLACE_MQTT_HIERARCHY` environment variable in a comma seperated list, which defaults to `["org", "building", "level", "area"]`
+This list defines the tags that can be applied to a `Zone` that act as scopes for events published to MQTT brokers.
+
+### Brokers
+
+`Broker`s are definitions of cloud/local MQTT brokers. This metadata is then used to create clients for these brokers, to which module state events and metadata events are published.
+
+### Metadata
+
+`ControlSystem` | `Zone` | `Driver` models are published to a persisted topic on service start and on any model changes.
+Model data is only published if the model exists beneath a top-level scope `Zone`.
+
+Metadata topic keys have the following format..
+`placeos/<top-level-scope>/metadata/<model-id>`.
+
+### State
+
+`Module` state data is only published if the model exists beneath a top-level scope `Zone`.
+`Module` events are propagated from the running `Module` via `redis` to registered MQTT brokers.
+
+State topic keys have the following format...
+`placeos/<scope zone>/state/<2nd zone_id>/../<nth zone_id>/<system_id>/<driver_id>/<module_name>/<index>/<status>`
 
 ## Contributors
 
