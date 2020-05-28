@@ -6,7 +6,7 @@ MQTT Client service for PlaceOS
 
 ## Implmentation
 
-Arbitrary hierarchies can be defined via the `PLACE_MQTT_HIERARCHY` environment variable in a comma seperated list, which defaults to `["org", "building", "level", "area"]`
+Arbitrary hierarchies can be defined via the `PLACE_MQTT_HIERARCHY` environment variable in a comma seperated list, which defaults to `org,building,level,area`.
 This list defines the tags that can be applied to a `Zone` that act as scopes for events published to MQTT brokers.
 
 ### Brokers
