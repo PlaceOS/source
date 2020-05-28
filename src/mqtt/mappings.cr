@@ -16,6 +16,9 @@ module PlaceOS::MQTT
 
     class_getter scope : String = HIERARCHY.first? || abort "Hierarchy must contain at least one scope"
 
+    def initialize(@state : State = State.new)
+    end
+
     # Status Keys
     ###########################################################################
 
@@ -46,8 +49,8 @@ module PlaceOS::MQTT
           if zone_mapping
             key_data = {
               status:            status,
-              index:             system_module_mapping[:index],
-              module_name:       system_module_mapping[:name],
+              index:             system_mapping[:index],
+              module_name:       system_mapping[:name],
               driver_id:         driver_id,
               control_system_id: control_system_id,
               zone_mapping:      zone_mapping,
@@ -85,9 +88,9 @@ module PlaceOS::MQTT
 
       subhierarchy_values = hierarchy_values[1..]
 
-      module_key = File.join(control_system_id, driver_id, module_name, index, status)
+      module_key = File.join(control_system_id, driver_id, module_name, index.to_s, status)
 
-      "/#{scope_value}/state/#{File.join(subhierarchy_values)}/#{module_key}"
+      "#{MQTT_NAMESPACE}/#{scope_value}/state/#{File.join(subhierarchy_values)}/#{module_key}"
     end
 
     # Hierarchy and Scoping
@@ -200,7 +203,7 @@ module PlaceOS::MQTT
       getter system_zones : Hash(String, Hash(String, String)) = {} of String => Hash(String, String)
     end
 
-    @state : State = State.new
+    @state : State
 
     private getter mappings_lock : RWLock = RWLock.new
 
