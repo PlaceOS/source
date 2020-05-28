@@ -18,7 +18,7 @@ shards:
 
   bindata:
     github: spider-gazelle/bindata
-    version: 1.5.1
+    version: 1.5.2
 
   bisect:
     github: spider-gazelle/bisect
@@ -102,7 +102,7 @@ shards:
 
   models:
     github: placeos/models
-    version: 1.2.0
+    version: 1.2.1
 
   mqtt:
     github: spider-gazelle/crystal-mqtt

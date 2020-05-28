@@ -1,6 +1,9 @@
-require "rwlock"
 require "file"
+require "models/broker"
 require "mqtt/v3/client"
+require "rwlock"
+
+require "../constants"
 
 module PlaceOS::MQTT
   # Publish to registered MQTT Brokers
@@ -12,7 +15,7 @@ module PlaceOS::MQTT
     alias Message = State | Metadata
 
     def self.metadata(scope : String, id : String, payload : String?)
-      Metadata.new(File.join(scope, id), payload)
+      Metadata.new(File.join(MQTT_NAMESPACE, scope, "metadata", id), payload)
     end
 
     def self.state(key : String, payload : String)
@@ -23,28 +26,16 @@ module PlaceOS::MQTT
 
     protected getter client : ::MQTT::V3::Client
 
-    private getter broker : Model::Broker
+    private getter broker : PlaceOS::Model::Broker
     private getter broker_lock : RWLock = RWLock.new
 
-    def write_broker
-      broker_lock.write do
-        yield broker
-      end
-    end
-
-    def read_broker
-      broker_lock.read do
-        yield broker
-      end
-    end
-
-    def set_broker(broker : Model::Broker)
+    def set_broker(broker : PlaceOS::Model::Broker)
       broker_lock.write do
         @broker = broker
       end
     end
 
-    def initialize(@broker : Model::Broker)
+    def initialize(@broker : PlaceOS::Model::Broker)
       @client = Publisher.client(@broker)
     end
 
@@ -55,11 +46,17 @@ module PlaceOS::MQTT
     end
 
     # Create an authenticated MQTT client off metadata in the Broker
-    def self.client(broker : Model::Broker)
+    def self.client(broker : PlaceOS::Model::Broker)
       # Create a transport (TCP, UDP, Websocket etc)
-      tls = OpenSSL::SSL::Context::Client.new
-      tls.verify_mode = OpenSSL::SSL::VerifyMode::NONE
-      transport = ::MQTT::Transport::TCP.new("test.mosquitto.org", 8883, tls)
+      tls = if broker.tls
+              tls_client = OpenSSL::SSL::Context::Client.new
+              tls_client.verify_mode = OpenSSL::SSL::VerifyMode::NONE
+              tls_client
+            else
+              nil
+            end
+
+      transport = ::MQTT::Transport::TCP.new(broker.host.as(String), broker.port.as(Int32), tls)
 
       # Establish a MQTT connection
       client = ::MQTT::V3::Client.new(transport)
@@ -80,9 +77,10 @@ module PlaceOS::MQTT
       case message
       when Metadata
         # Update persistent metadata topic (includes deleting)
+        client.publish(topic: message.key, payload: message.payload, retain: true)
       when State
-        # Generate key from routers and update state key
         # Publish event to generated key
+        client.publish(topic: message.key, payload: message.payload)
       end
     rescue e
       Log.error(exception: e) { "error while publishing Message<#{message.inspect}>" }
