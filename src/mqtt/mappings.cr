@@ -15,6 +15,7 @@ module PlaceOS::MQTT
     Log = ::Log.for("mqtt.mappings")
 
     class_getter scope : String = HIERARCHY.first? || abort "Hierarchy must contain at least one scope"
+    private class_getter hierarchy_set : Set(String) = HIERARCHY.to_set
 
     def initialize(@state : State = State.new)
     end
@@ -131,7 +132,7 @@ module PlaceOS::MQTT
     end
 
     def self.hierarchy_tag?(zone : Model::Zone) : String?
-      hierarchy_tags = zone.tags.as(Set(String)) & HIERARCHY
+      hierarchy_tags = zone.tags.as(Set(String)) & hierarchy_set
 
       if hierarchy_tags.size > 1
         Log.error { "Zone<#{zone.id}> has more than one hierarchy tag: #{hierarchy_tags}" }

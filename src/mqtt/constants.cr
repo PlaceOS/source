@@ -6,7 +6,7 @@ module PlaceOS::MQTT
   APP_NAME    = "mqtt"
   VERSION     = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
 
-  HIERARCHY      = (ENV["PLACE_MQTT_HIERARCHY"]?.try(&.split(' ')) || ["org", "building", "level", "area"]).to_set
+  HIERARCHY      = ENV["PLACE_MQTT_HIERARCHY"]?.try(&.split(' ')) || ["org", "building", "level", "area"]
   MQTT_NAMESPACE = "placeos"
 
   LOG_BACKEND = ActionController.default_backend

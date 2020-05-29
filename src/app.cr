@@ -5,8 +5,8 @@ require "./mqtt/constants"
 
 module PlaceOS::MQTT
   # Server defaults
-  host = ENV["PLACE_LOADER_HOST"]? || "127.0.0.1"
-  port = (ENV["PLACE_LOADER_PORT"]? || 3000).to_i
+  host = ENV["PLACE_MQTT_HOST"]? || "127.0.0.1"
+  port = (ENV["PLACE_MQTT_PORT"]? || 3000).to_i
 
   # Application configuration
   content_directory = nil
@@ -17,12 +17,6 @@ module PlaceOS::MQTT
   # Command line options
   OptionParser.parse(ARGV.dup) do |parser|
     parser.banner = "Usage: #{APP_NAME} [arguments]"
-
-    # Application flags
-    parser.on("--www=CONTENT_DIR", "Specifies the content directory") { |d| content_directory = d }
-    parser.on("--update-crontab=CRON", "Specifies the update crontab") { |c| update_crontab = c }
-    parser.on("--git-username=USERNAME", "Specifies the git username") { |u| git_username = u }
-    parser.on("--git-password=PASSWORD", "Specifies the git password") { |p| git_password = p }
 
     # Server flags
     parser.on("-b HOST", "--bind=HOST", "Specifies the server host") { |h| host = h }
