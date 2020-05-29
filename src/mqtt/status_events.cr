@@ -12,6 +12,7 @@ module PlaceOS::MQTT
 
     getter redis : Redis
     private getter mappings : Mappings
+    private getter publisher_manager : PublisherManager
 
     delegate :close, to: redis
 
@@ -29,10 +30,13 @@ module PlaceOS::MQTT
     end
 
     protected def handle_pevent(pattern : String, channel : String, payload : String)
-      module_id, status = ModuleEvents.parse_channel(channel)
-      key = mappings.state_event_key?(module_id, status)
-
-      publisher_manager.broadcast(Publisher.state(key, payload)) if key
+      module_id, status = StatusEvents.parse_channel(channel)
+      keys = mappings.state_event_keys?(module_id, status)
+      if keys
+        keys.each do |key|
+          publisher_manager.broadcast(Publisher.state(key, payload))
+        end
+      end
     end
 
     def self.parse_channel(channel : String) : {String, String}
