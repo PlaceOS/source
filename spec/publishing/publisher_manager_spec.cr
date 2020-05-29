@@ -17,7 +17,9 @@ module PlaceOS::MQTT
       publisher_manager.start
 
       # Yield to the PublisherManager
-      sleep 0.01
+      while publisher_manager.processed.size != 1
+        Fiber.yield
+      end
 
       publisher = publisher_manager.@publishers[id]?
       publisher.should_not be_nil
