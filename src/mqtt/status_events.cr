@@ -6,6 +6,8 @@ require "./publishing/publisher_manager"
 
 module PlaceOS::MQTT
   class StatusEvents
+    Log = ::Log.for("mqtt.status_events")
+
     STATUS_CHANNEL_PATTERN = "status/*"
 
     getter redis : Redis
@@ -13,7 +15,7 @@ module PlaceOS::MQTT
 
     delegate :close, to: redis
 
-    def initialize(@publisher_manager : PublisherManager, @mappings : Mappings, @redis : Redis = Redis.new(url: ENV["REDIS_URL"]?))
+    def initialize(@mappings : Mappings, @publisher_manager : PublisherManager, @redis : Redis = Redis.new(url: ENV["REDIS_URL"]?))
     end
 
     def start

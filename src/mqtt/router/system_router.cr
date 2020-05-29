@@ -10,9 +10,9 @@ module PlaceOS::MQTT::Router
   # System router (If correctly scoped)
   # - Publishes metadata
   # - Listens for changes to the `zones` array
-  #   + updates system_zones
+  #   + maintain system_zones
   # - Listens for changes to the `modules` array
-  #   + updates system_modules
+  #   + maintain system_modules
   # - Remove references to ControlSystem on destroy
   class ControlSystem < Resource(PlaceOS::Model::ControlSystem)
     include PublishMetadata(PlaceOS::Model::ControlSystem)

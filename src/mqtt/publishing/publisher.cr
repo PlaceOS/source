@@ -37,6 +37,8 @@ module PlaceOS::MQTT
 
     def initialize(@broker : PlaceOS::Model::Broker)
       @client = Publisher.client(@broker)
+      # TODO: Uncomment once nil payloads allowed in MQTT client
+      # consume_messages
     end
 
     def close
@@ -65,7 +67,7 @@ module PlaceOS::MQTT
       client
     end
 
-    def consume_messages
+    private def consume_messages
       spawn do
         while message = message_queue.receive?
           publish(message)

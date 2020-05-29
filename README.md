@@ -4,7 +4,7 @@ MQTT Client service for PlaceOS
 
 [![Build Status](https://travis-ci.com/PlaceOS/mqtt.svg?token=tDypQH5g9ptvYso68jVV&branch=master)](https://travis-ci.com/PlaceOS/mqtt)
 
-## Implmentation
+## Implementation
 
 Arbitrary hierarchies can be defined via the `PLACE_MQTT_HIERARCHY` environment variable in a comma seperated list, which defaults to `org,building,level,area`.
 This list defines the tags that can be applied to a `Zone` that act as scopes for events published to MQTT brokers.
@@ -23,8 +23,8 @@ Metadata topic keys have the following format..
 
 ### State
 
-`Module` state data is only published if the model exists beneath a top-level scope `Zone`.
-`Module` events are propagated from the running `Module` via `redis` to registered MQTT brokers.
+`Module` status data is only published if the model exists beneath a top-level scope `Zone`.
+`Module` status events are propagated from the running `Module` via `redis` to registered MQTT brokers.
 
 State topic keys have the following format...
 `placeos/<scope zone>/state/<2nd zone_id>/../<nth zone_id>/<system_id>/<driver_id>/<module_name>/<index>/<status>`

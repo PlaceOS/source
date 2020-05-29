@@ -20,7 +20,7 @@ module PlaceOS::MQTT
     def initialize(@state : State = State.new)
     end
 
-    # Status Keys
+    # State Keys
     ###########################################################################
 
     # Generates topic keys if event is to be published.

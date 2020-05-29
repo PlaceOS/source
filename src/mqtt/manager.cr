@@ -11,6 +11,8 @@ module PlaceOS::MQTT
     getter module_router : Router::Module
     getter zone_router : Router::Zone
 
+    getter status_events : StatusEvents
+
     getter publisher_manager : PublisherManager
 
     getter? started = false
@@ -29,6 +31,7 @@ module PlaceOS::MQTT
       @driver_router = Router::Driver.new(mappings, publisher_manager)
       @module_router = Router::Module.new(mappings)
       @zone_router = Router::Zone.new(mappings, publisher_manager)
+      @status_events = StatusEvents.new(mappings, publisher_manager)
     end
 
     def start
@@ -53,12 +56,16 @@ module PlaceOS::MQTT
       # Publish any relevant driver metadata
       Log.info { "starting Driver router" }
       driver_router.start
+
+      Log.info { "listening for Module state events" }
+      status_events.start
     end
 
     def stop
       return unless started?
 
       @started = false
+      status_events.stop
       publisher_manager.stop
       control_system_router.stop
       driver_router.stop

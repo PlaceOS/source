@@ -5,7 +5,7 @@ require "../resource"
 
 module PlaceOS::MQTT::Router
   # Module router...
-  # - Listen for changes to the Module's name and update `system_module_mappings`
+  # - Listen for changes to the Module's name and update `system_modules`
   # - Maintain module_id -> driver_id mapping
   class Module < Resource(Model::Module)
     private getter mappings : Mappings
