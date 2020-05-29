@@ -16,5 +16,8 @@ module PlaceOS::MQTT
       sleep 0.01
       router.processed.should be_empty
     end
+
+    pending "updates existing system_zones on tag change" do
+    end
   end
 end
