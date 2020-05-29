@@ -37,8 +37,7 @@ module PlaceOS::MQTT
 
     def initialize(@broker : PlaceOS::Model::Broker)
       @client = Publisher.client(@broker)
-      # TODO: Uncomment once nil payloads allowed in MQTT client
-      # consume_messages
+      consume_messages
     end
 
     def close
@@ -76,13 +75,18 @@ module PlaceOS::MQTT
     end
 
     protected def publish(message : Message)
+      # Sanitize the payload according the Broker's filters
+      payload = broker_lock.read do
+        message.payload.try { |p| broker.sanitize(p) }
+      end
+
       case message
       when Metadata
         # Update persistent metadata topic (includes deleting)
-        client.publish(topic: message.key, payload: message.payload, retain: true)
+        client.publish(topic: message.key, payload: payload, retain: true)
       when State
         # Publish event to generated key
-        client.publish(topic: message.key, payload: message.payload)
+        client.publish(topic: message.key, payload: payload)
       end
     rescue e
       Log.error(exception: e) { "error while publishing Message<#{message.inspect}>" }

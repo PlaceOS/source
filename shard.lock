@@ -106,7 +106,7 @@ shards:
 
   mqtt:
     github: spider-gazelle/crystal-mqtt
-    version: 1.0.0
+    version: 1.0.1
 
   murmur3:
     github: aca-labs/murmur3
