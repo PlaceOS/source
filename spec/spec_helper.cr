@@ -4,6 +4,14 @@ require "models/spec/generator"
 require "../src/placeos-mqtt"
 
 module PlaceOS::MQTT
+  class MockManager < PublisherManager
+    getter messages : Array(Publisher::Metadata | Publisher::State) = [] of Publisher::Metadata | Publisher::State
+
+    def broadcast(message)
+      messages << message
+    end
+  end
+
   def self.mock_state(
     module_id = "mod-1234",
     index = 1,
