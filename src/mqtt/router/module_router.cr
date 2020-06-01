@@ -41,7 +41,7 @@ module PlaceOS::MQTT::Router
       module_id = mod.id.as(String)
       mappings.write do |state|
         # Remove reference in drivers
-        state.drivers.reject!(module_id)
+        state.drivers.delete(module_id)
         state.system_modules.delete(module_id)
       end
     end
