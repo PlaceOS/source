@@ -13,7 +13,7 @@ module PlaceOS::MQTT
       if Mappings.hierarchy_tag?(zone) == Mappings.scope
         payload = model.destroyed? ? nil : model.to_json
         # Fire off broadcast
-        spawn { publisher_manager.broadcast(Publisher.metadata(scope, model.id.as(String), payload)) }
+        spawn { publisher_manager.broadcast(Publisher.metadata(Mappings.scope, model.id.as(String), payload)) }
       end
     end
   end

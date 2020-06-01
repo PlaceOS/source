@@ -21,8 +21,6 @@ module PlaceOS::MQTT::Router
     private getter mappings : Mappings
     private getter publisher_manager : PublisherManager
 
-    delegate :scope, to: Mappings
-
     def initialize(@mappings : Mappings, @publisher_manager : PublisherManager = PublisherManager.instance)
       super()
     end

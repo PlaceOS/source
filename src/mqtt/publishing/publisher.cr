@@ -89,7 +89,7 @@ module PlaceOS::MQTT
         client.publish(topic: message.key, payload: payload)
       end
     rescue e
-      Log.error(exception: e) { "error while publishing Message<#{message.inspect}>" }
+      Log.error(exception: e) { "error while publishing Message<key=#{message.key}, payload=#{message.payload}>" }
     end
   end
 end

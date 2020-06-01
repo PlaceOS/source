@@ -58,7 +58,9 @@ module PlaceOS::MQTT
       driver_router.start
 
       Log.info { "listening for Module state events" }
-      status_events.start
+      spawn(same_thread: true) { status_events.start }
+
+      Fiber.yield
     end
 
     def stop

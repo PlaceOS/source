@@ -24,6 +24,8 @@ dependencies:
     github: spider-gazelle/rethinkdb-orm
   rwlock:
     github: spider-gazelle/readers-writer
+  simple_retry:
+    github: spider-gazelle/simple_retry
 
 development_dependencies:
   faker:
