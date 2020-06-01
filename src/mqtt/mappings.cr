@@ -15,6 +15,7 @@ module PlaceOS::MQTT
     Log = ::Log.for("mqtt.mappings")
 
     class_getter scope : String = HIERARCHY.first? || abort "Hierarchy must contain at least one scope"
+    class_getter hierarchy : Array(String) = HIERARCHY
     private class_getter hierarchy_set : Set(String) = HIERARCHY.to_set
 
     def initialize(@state : State = State.new)

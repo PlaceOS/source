@@ -97,16 +97,20 @@ module PlaceOS::MQTT::Router
       system_module_mappings
     end
 
-    def self.system_zones(control_system : PlaceOS::Model::ControlSystem) : Hash(String, String)
-      # Look up zones
-      zone_list = control_system.zones
-      return {} of String => String if zone_list.nil? || zone_list.empty?
-
+    def self.system_zones(control_system : PlaceOS::Model::ControlSystem, zones : Array(PlaceOS::Model::Zone)? = nil) : Hash(String, String)
       # Generate zone mappings
-      zone_mappings = PlaceOS::Model::Zone.get_all(zone_list).compact_map do |zone|
-        tag = Mappings.hierarchy_tag?(zone)
-        Mappings.zone_mapping(zone.id.as(String), tag) unless tag.nil?
-      end
+      # NOTE: Duplication decessary due to compiler bug with iteration
+      zone_mappings = if !zones.nil?
+                        zones.compact_map do |zone|
+                          tag = Mappings.hierarchy_tag?(zone)
+                          Mappings.zone_mapping(zone.id.as(String), tag) unless tag.nil?
+                        end
+                      else
+                        _system_zones(control_system).compact_map do |zone|
+                          tag = Mappings.hierarchy_tag?(zone)
+                          Mappings.zone_mapping(zone.id.as(String), tag) unless tag.nil?
+                        end
+                      end
 
       # Merge individual zone_mappings into a single zone mapping hash
       zone_mappings.reduce({} of String => String) do |acc, mapping|
@@ -115,19 +119,21 @@ module PlaceOS::MQTT::Router
     end
 
     # Map from `module_id` => {control_system_id: String, name: String, index: Int32}
-    def self.system_modules(control_system : PlaceOS::Model::ControlSystem) : Hash(String, Mappings::SystemModule)
-      module_ids = control_system.modules
+    def self.system_modules(control_system : PlaceOS::Model::ControlSystem, modules : Array(PlaceOS::Model::Module)? = nil) : Hash(String, Mappings::SystemModule)
       control_system_id = control_system.id.as(String)
-
-      return {} of String => Mappings::SystemModule if module_ids.nil? || module_ids.empty?
 
       # module_name => [module_id]
       # Order module_ids, grouped by resolved name
-      grouped = PlaceOS::Model::Module
-        .find_all(module_ids)
-        .each_with_object(Hash(String, Array(String)).new([] of String)) { |mod, mapping|
-          mapping[mod.resolved_name.as(String)] << mod.id.as(String)
-        }
+      # NOTE: Duplication decessary due to compiler bug with iteration
+      grouped = if !modules.nil?
+                  modules.each_with_object(Hash(String, Array(String)).new { |h, k| h[k] = [] of String }) { |mod, mapping|
+                    mapping[mod.resolved_name.as(String)] << mod.id.as(String)
+                  }
+                else
+                  _system_modules(control_system).each_with_object(Hash(String, Array(String)).new { |h, k| h[k] = [] of String }) { |mod, mapping|
+                    mapping[mod.resolved_name.as(String)] << mod.id.as(String)
+                  }
+                end
 
       # module_id => Mappings::SystemModule
       # Generate SystemModule mappings
@@ -136,6 +142,18 @@ module PlaceOS::MQTT::Router
           mapping[id] = {name: name, control_system_id: control_system_id, index: index}
         end
       end
+    end
+
+    # Get zones
+    protected def self._system_zones(control_system : PlaceOS::Model::ControlSystem)
+      zone_list = control_system.zones || [] of String
+      PlaceOS::Model::Zone.get_all(zone_list)
+    end
+
+    # Get modules
+    protected def self._system_modules(control_system : PlaceOS::Model::ControlSystem)
+      module_ids = control_system.modules || [] of String
+      PlaceOS::Model::Module.get_all(module_ids)
     end
   end
 end
