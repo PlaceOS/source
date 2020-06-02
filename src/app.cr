@@ -8,12 +8,6 @@ module PlaceOS::MQTT
   host = ENV["PLACE_MQTT_HOST"]? || "127.0.0.1"
   port = (ENV["PLACE_MQTT_PORT"]? || 3000).to_i
 
-  # Application configuration
-  content_directory = nil
-  update_crontab = nil
-  git_username = nil
-  git_password = nil
-
   # Command line options
   OptionParser.parse(ARGV.dup) do |parser|
     parser.banner = "Usage: #{APP_NAME} [arguments]"
