@@ -1,4 +1,4 @@
-require "models/driver"
+require "placeos-models/driver"
 
 require "../mappings"
 require "../publishing/publish_metadata"

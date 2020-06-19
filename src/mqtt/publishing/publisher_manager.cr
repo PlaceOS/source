@@ -1,4 +1,4 @@
-require "models/broker"
+require "placeos-models/broker"
 require "rwlock"
 
 require "./publisher"

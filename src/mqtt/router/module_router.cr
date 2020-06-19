@@ -1,4 +1,4 @@
-require "models/module"
+require "placeos-models/module"
 
 require "../mappings"
 require "../resource"

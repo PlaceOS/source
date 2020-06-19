@@ -1,5 +1,5 @@
-require "models/control_system"
-require "models/zone"
+require "placeos-models/control_system"
+require "placeos-models/zone"
 
 require "../mappings"
 require "../publishing/publish_metadata"

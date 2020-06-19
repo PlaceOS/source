@@ -1,5 +1,5 @@
 require "spec"
-require "models/spec/generator"
+require "placeos-models/spec/generator"
 
 require "../src/placeos-mqtt"
 

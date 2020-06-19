@@ -1,6 +1,6 @@
-require "models/control_system"
-require "models/module"
-require "models/zone"
+require "placeos-models/control_system"
+require "placeos-models/module"
+require "placeos-models/zone"
 require "rwlock"
 
 require "./constants"
