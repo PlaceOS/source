@@ -57,7 +57,8 @@ module PlaceOS::MQTT
 
     describe "hierarchy_zones" do
       it "gets scope zones for ControlSystem" do
-        parallel Model::ControlSystem.clear, Model::Zone.clear
+        Model::ControlSystem.clear
+        Model::Zone.clear
 
         good_zone = Model::Generator.zone
         good_zone.tags = Set{Mappings.scope, "good"}
@@ -76,7 +77,10 @@ module PlaceOS::MQTT
       end
 
       it "gets scope zones for Driver" do
-        parallel Model::Module.clear, Model::ControlSystem.clear, Model::Zone.clear, Model::Driver.clear
+        Model::Module.clear
+        Model::ControlSystem.clear
+        Model::Zone.clear
+        Model::Driver.clear
 
         good_zone = Model::Generator.zone
         good_zone.tags = Set{Mappings.scope, "good"}
@@ -100,7 +104,10 @@ module PlaceOS::MQTT
       end
 
       it "gets scope zones for Module" do
-        parallel Model::Module.clear, Model::ControlSystem.clear, Model::Zone.clear, Model::Driver.clear
+        Model::Module.clear
+        Model::ControlSystem.clear
+        Model::Zone.clear
+        Model::Driver.clear
 
         good_zone = Model::Generator.zone
         good_zone.tags = Set{Mappings.scope, "good"}

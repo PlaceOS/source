@@ -1,4 +1,4 @@
-require "models/zone"
+require "placeos-models/zone"
 
 require "./publisher"
 require "./publisher_manager"

@@ -1,5 +1,5 @@
 require "file"
-require "models/broker"
+require "placeos-models/broker"
 require "mqtt/v3/client"
 require "rwlock"
 

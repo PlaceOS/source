@@ -1,6 +1,6 @@
 name: placeos-mqtt
-version: 0.1.0
-crystal: 0.34.0
+version: 0.1.1
+crystal: 0.35.1
 
 targets:
   mqtt:
@@ -9,21 +9,29 @@ targets:
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
-  core:
-    github: placeos/core
-    version: ~> 1
-  models:
-    github: placeos/models
-    version: ~> 1
+
   mqtt:
     github: spider-gazelle/crystal-mqtt
+
+  placeos-core:
+    github: placeos/core
+    version: ~> 2.3
+
+  placeos-models:
+    github: placeos/models
+    version: ~> 2
+
   redis:
     github: stefanwille/crystal-redis
     version: ~> 2.6
+
   rethinkdb-orm:
     github: spider-gazelle/rethinkdb-orm
+    version: ~> 2.9
+
   rwlock:
     github: spider-gazelle/readers-writer
+
   simple_retry:
     github: spider-gazelle/simple_retry
 

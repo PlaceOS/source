@@ -20,7 +20,7 @@ ActionController::Server.before(
 logging = Proc(Signal, Nil).new do |signal|
   level = signal.usr1? ? Log::Severity::Debug : Log::Severity::Info
   puts " > Log level changed to #{level}"
-  Log.builder.bind "mqtt.*", level, PlaceOS::MQTT::LOG_BACKEND
+  ::Log.builder.bind "mqtt.*", level, PlaceOS::MQTT::LOG_BACKEND
   signal.ignore
 end
 
@@ -31,4 +31,6 @@ Signal::USR2.trap &logging
 
 # Logging configuration
 log_level = PROD ? Log::Severity::Info : Log::Severity::Debug
-Log.builder.bind "*", log_level, PlaceOS::MQTT::LOG_BACKEND
+::Log.setup "*", log_level, PlaceOS::MQTT::LOG_BACKEND
+::Log.builder.bind "mqtt.*", log_level, PlaceOS::MQTT::LOG_BACKEND
+::Log.builder.bind "action-controller.*", log_level, PlaceOS::MQTT::LOG_BACKEND
