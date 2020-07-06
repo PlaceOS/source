@@ -16,7 +16,7 @@ module PlaceOS::MQTT
       sleep 0.1
 
       Redis.open(url: ENV["REDIS_URL"]?) do |client|
-        client.publish("status/#{module_id}/#{status_key}", "on")
+        client.publish("status/#{module_id}/#{status_key}", "on".to_json)
       end
 
       sleep 0.1
@@ -25,7 +25,7 @@ module PlaceOS::MQTT
       message.should_not be_nil
       message = message.not_nil!
       message.key.should eq "placeos/org-donor/state/cards/nek/2042/cs-9445/12345/M'Odule/1/#{status_key}"
-      message.payload.should eq "on"
+      message.payload.should eq expected_payload("on")
 
       events.stop
     end

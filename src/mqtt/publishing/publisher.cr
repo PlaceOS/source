@@ -8,10 +8,20 @@ require "../constants"
 module PlaceOS::MQTT
   # Publish to registered MQTT Brokers
   class Publisher
-    Log = ::Log.for("mqtt.publisher")
+    Log = ::Log.for(self)
 
-    record Metadata, key : String, payload : String?
-    record State, key : String, payload : String
+    record Metadata, key : String, payload : String do
+      def initialize(@key : String, payload : String?)
+        @payload = Publisher.payload(payload)
+      end
+    end
+
+    record State, key : String, payload : String do
+      def initialize(@key : String, payload : String)
+        @payload = Publisher.payload(payload)
+      end
+    end
+
     alias Message = State | Metadata
 
     def self.metadata(scope : String, id : String, payload : String?)
@@ -20,6 +30,15 @@ module PlaceOS::MQTT
 
     def self.state(key : String, payload : String)
       State.new(key, payload)
+    end
+
+    def self.payload(value, timestamp : Time = self.timestamp)
+      value = "null" if value.nil?
+      %({"time":#{timestamp.to_unix_ms},"value":#{value}})
+    end
+
+    def self.timestamp
+      Time.utc
     end
 
     getter message_queue : Channel(Message) = Channel(Message).new

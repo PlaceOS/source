@@ -17,15 +17,15 @@ module PlaceOS::MQTT
         scope = "zone-big1"
         nil_message = Publisher.metadata(scope, id, nil)
         nil_message.key.should eq File.join(MQTT_NAMESPACE, scope, "metadata", id)
-        nil_message.payload.should be_nil
+        JSON.parse(nil_message.payload)["value"].raw.should be_nil
       end
 
       it "state" do
-        payload = %({"hello": "world"})
+        payload = {hello: "world"}
         key = "key"
-        message = Publisher.state(key, payload)
+        message = Publisher.state(key, payload.to_json)
         message.key.should eq key
-        message.payload.should eq payload
+        message.payload.should eq expected_payload(payload)
       end
     end
   end
