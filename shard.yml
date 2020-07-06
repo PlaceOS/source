@@ -1,5 +1,5 @@
 name: placeos-mqtt
-version: 0.1.1
+version: 0.2.0
 crystal: 0.35.1
 
 targets:
@@ -19,7 +19,7 @@ dependencies:
 
   placeos-models:
     github: placeos/models
-    version: ~> 2
+    version: ~> 3
 
   redis:
     github: stefanwille/crystal-redis
@@ -27,7 +27,7 @@ dependencies:
 
   rethinkdb-orm:
     github: spider-gazelle/rethinkdb-orm
-    version: ~> 2.9
+    version: ~> 2.10
 
   rwlock:
     github: spider-gazelle/readers-writer
