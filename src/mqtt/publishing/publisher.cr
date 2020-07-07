@@ -1,6 +1,7 @@
 require "file"
-require "placeos-models/broker"
+require "json"
 require "mqtt/v3/client"
+require "placeos-models/broker"
 require "rwlock"
 
 require "../constants"
@@ -32,9 +33,20 @@ module PlaceOS::MQTT
       State.new(key, payload)
     end
 
+    private struct Event
+      include JSON::Serializable
+
+      @[JSON::Field(converter: Time::EpochConverter)]
+      getter time : Time
+      @[JSON::Field(converter: String::RawConverter, emit_null: true)]
+      getter value : String?
+
+      def initialize(@value, @time)
+      end
+    end
+
     def self.payload(value, timestamp : Time = self.timestamp)
-      value = "null" if value.nil?
-      %({"time":#{timestamp.to_unix_ms},"value":#{value}})
+      Event.new(value, timestamp).to_json
     end
 
     def self.timestamp
