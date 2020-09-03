@@ -1,6 +1,8 @@
-# PlaceOS MQTT Service
+# PlaceOS State Source Service
 
-MQTT Client service for PlaceOS
+Service that publishes module state.
+
+Currently MQTT and InfluxDB are supported backends.
 
 [![Build Status](https://travis-ci.com/PlaceOS/mqtt.svg?token=tDypQH5g9ptvYso68jVV&branch=master)](https://travis-ci.com/PlaceOS/mqtt)
 
