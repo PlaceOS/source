@@ -5,7 +5,7 @@ require "./mappings"
 require "./publishing/publisher"
 require "./publishing/publisher_manager"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   class StatusEvents
     Log = ::Log.for(self)
 
@@ -47,10 +47,11 @@ module PlaceOS::Ingest
 
     protected def handle_pevent(pattern : String, channel : String, payload : String)
       module_id, status = StatusEvents.parse_channel(channel)
-      events = mappings.state_event_data?(module_id, status)
+      events = mappings.status_events?(module_id, status)
       if events
         events.each do |event|
-          publisher_managers.each &.broadcast(event, payload)
+          message = Publisher::Message.new(event, payload)
+          publisher_managers.each &.broadcast(message)
         end
       end
     end

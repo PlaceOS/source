@@ -6,7 +6,7 @@ require "rwlock"
 
 require "./publisher"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   # Publish to registered MQTT Brokers
   class MqttPublisher < Publisher
     private struct Event

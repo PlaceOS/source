@@ -1,6 +1,6 @@
 require "./publisher_manager"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   class InfluxManager
     include PublisherManager
     # set up the publisher,

@@ -2,7 +2,7 @@ require "action-controller"
 require "log_helper"
 require "random"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   API_VERSION = "v1"
   APP_NAME    = "mqtt"
   VERSION     = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}

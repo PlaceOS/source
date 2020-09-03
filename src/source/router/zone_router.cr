@@ -6,7 +6,7 @@ require "../mappings"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
 
-module PlaceOS::Ingest::Router
+module PlaceOS::Source::Router
   # Zone router (if scoped)...
   # - listens for changes to Zone's tags and update system_zones in Mappings
   # - publishes metadata

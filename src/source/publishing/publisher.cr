@@ -1,6 +1,6 @@
 require "../constants"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   abstract class Publisher
     Log = ::Log.for(self)
 

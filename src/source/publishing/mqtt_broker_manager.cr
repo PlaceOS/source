@@ -4,7 +4,7 @@ require "placeos-resource"
 require "./publisher"
 require "./mqtt_publisher"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   # Create and maintain Publishers from Brokers
   class MqttBrokerManager < Resource(Model::Broker)
     include PublisherManager

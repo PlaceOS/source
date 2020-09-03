@@ -4,7 +4,7 @@ require "./publisher"
 require "./publisher_manager"
 require "../mappings"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   module PublishMetadata(Model)
     abstract def publisher_managers : Array(PublisherManager)
 

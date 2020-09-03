@@ -6,7 +6,7 @@ require "../mappings"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
 
-module PlaceOS::Ingest::Router
+module PlaceOS::Source::Router
   # ControlSystem router (If correctly scoped)
   # - Publishes metadata
   # - Listens for changes to the `zones` array
@@ -67,7 +67,7 @@ module PlaceOS::Ingest::Router
         publish_metadata(zone, control_system)
       end
 
-      case event[:action]
+      case action
       in Resource::Action::Created
         handle_create(control_system)
       in Resource::Action::Updated
@@ -79,7 +79,7 @@ module PlaceOS::Ingest::Router
 
     # Create/update a mapping for ControlSystem's Zones
     def zone_mappings(control_system : PlaceOS::Model::ControlSystem)
-      system_zone_mappings = Router::System.system_zones(control_system)
+      system_zone_mappings = Router::ControlSystem.system_zones(control_system)
 
       mappings.write do |state|
         state.system_zones[control_system.id.as(String)] = system_zone_mappings
@@ -90,7 +90,7 @@ module PlaceOS::Ingest::Router
 
     # Create/update mappings for ControlSystem's Modules
     def module_mappings(control_system : PlaceOS::Model::ControlSystem)
-      system_module_mappings = Router::System.system_modules(control_system)
+      system_module_mappings = Router::ControlSystem.system_modules(control_system)
 
       mappings.set_system_modules(control_system.id.as(String), system_module_mappings)
 

@@ -1,9 +1,9 @@
 require "option_parser"
 
 require "./config"
-require "./mqtt/constants"
+require "./source/constants"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   # Server defaults
   host = DEFAULT_MQTT_HOST
   port = DEFAULT_MQTT_PORT
@@ -50,7 +50,7 @@ module PlaceOS::Ingest
   end
 
   # Start application manager
-  PlaceOS::Ingest::Manager.instance.start
+  PlaceOS::Source::Manager.instance.start
 
   # Server Configuration
 

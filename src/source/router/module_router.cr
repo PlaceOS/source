@@ -3,7 +3,7 @@ require "placeos-resource"
 
 require "../mappings"
 
-module PlaceOS::Ingest::Router
+module PlaceOS::Source::Router
   # Module router...
   # - Listen for changes to the Module's name and update `system_modules`
   # - Maintain module_id -> driver_id mapping
@@ -30,7 +30,7 @@ module PlaceOS::Ingest::Router
       if mod.custom_name_changed?
         # Update the `system_module` entry for each ControlSystem that has a reference to the Module
         Model::ControlSystem.by_module_id(module_id).each do |cs|
-          mappings.set_system_modules(cs.id.as(String), Router::System.system_modules(cs))
+          mappings.set_system_modules(cs.id.as(String), Router::ControlSystem.system_modules(cs))
         end
       end
 
@@ -44,6 +44,8 @@ module PlaceOS::Ingest::Router
         state.drivers.delete(module_id)
         state.system_modules.delete(module_id)
       end
+
+      Resource::Result::Success
     end
 
     def process_resource(action : Resource::Action, resource : Model::Module) : Resource::Result
@@ -52,7 +54,7 @@ module PlaceOS::Ingest::Router
       hierarchy_zones = Mappings.hierarchy_zones(mod)
       return Resource::Result::Skipped if hierarchy_zones.empty?
 
-      case event[:action]
+      case action
       in Resource::Action::Created
         handle_create(mod)
       in Resource::Action::Updated

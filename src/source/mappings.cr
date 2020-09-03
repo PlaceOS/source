@@ -5,7 +5,7 @@ require "rwlock"
 
 require "./constants"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   # Consolidated data object maintaining mappings
   #
   # Handles...

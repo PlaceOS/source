@@ -5,12 +5,12 @@ require "../mappings"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
 
-module PlaceOS::Ingest::Router
+module PlaceOS::Source::Router
   # Driver router...
   # - removes driver mapping if driver removed
   # - publishes metadata (if correctly scoped)
-  class Driver < Resource(Model::Driver)
-    include PublishMetadata(Model::Driver)
+  class Driver < Resource(PlaceOS::Model::Driver)
+    include PublishMetadata(PlaceOS::Model::Driver)
     Log = ::Log.for(self)
 
     private getter mappings : Mappings
@@ -20,7 +20,7 @@ module PlaceOS::Ingest::Router
       super()
     end
 
-    def process_resource(action : Resource::Action, resource : Model::Driver) : Resource::Result
+    def process_resource(action : Resource::Action, resource : PlaceOS::Model::Driver) : Resource::Result
       driver = resource
       driver_id = driver.id.as(String)
 

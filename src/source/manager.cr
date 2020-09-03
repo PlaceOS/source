@@ -2,7 +2,7 @@ require "./mappings"
 require "./publishing/*"
 require "./router/*"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   class Manager
     Log = ::Log.for(self)
 
@@ -20,7 +20,7 @@ module PlaceOS::Ingest
     class_getter instance : self { new }
 
     def initialize(
-      @publisher_managers : Array(PublisherManager),
+      @publisher_managers : Array(PublisherManager) = [] of PublisherManager,
       @mappings : Mappings = Mappings.new
     )
       @control_system_router = Router::ControlSystem.new(mappings, publisher_managers)

@@ -1,7 +1,7 @@
 require "spec"
 require "placeos-models/spec/generator"
 
-require "../src/placeos-mqtt"
+require "../src/placeos-source"
 
 def expected_payload(value)
   %({"time":0,"value":#{value.to_json}})

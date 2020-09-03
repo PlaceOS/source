@@ -7,7 +7,7 @@ require "time"
 
 require "./publisher"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   class InfluxManager
     include PublisherManager
 
@@ -29,7 +29,7 @@ module PlaceOS::Ingest
     # Write an MQTT event to InfluxDB
     #
     def publish(message : Publisher::Message)
-      point = Ingest.transform(message)
+      point = Source.transform(message)
       if point
         Log.debug { {
           measurement: point.measurement,

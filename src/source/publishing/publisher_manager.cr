@@ -1,6 +1,6 @@
 require "./publisher"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   module PublisherManager
     abstract def broadcast(message : Publisher::Message)
     abstract def start
