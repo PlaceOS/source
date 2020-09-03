@@ -3,10 +3,10 @@ require "option_parser"
 require "./config"
 require "./mqtt/constants"
 
-module PlaceOS::MQTT
+module PlaceOS::Ingest
   # Server defaults
-  host = ENV["PLACE_MQTT_HOST"]? || "127.0.0.1"
-  port = (ENV["PLACE_MQTT_PORT"]? || 3000).to_i
+  host = DEFAULT_MQTT_HOST
+  port = DEFAULT_MQTT_PORT
 
   # Command line options
   OptionParser.parse(ARGV.dup) do |parser|
@@ -50,7 +50,7 @@ module PlaceOS::MQTT
   end
 
   # Start application manager
-  PlaceOS::MQTT::Manager.instance.start
+  PlaceOS::Ingest::Manager.instance.start
 
   # Server Configuration
 

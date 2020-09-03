@@ -1,28 +1,27 @@
 require "placeos-models/driver"
+require "placeos-resource"
 
 require "../mappings"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
-require "../resource"
 
-module PlaceOS::MQTT::Router
+module PlaceOS::Ingest::Router
   # Driver router...
   # - removes driver mapping if driver removed
   # - publishes metadata (if correctly scoped)
   class Driver < Resource(Model::Driver)
     include PublishMetadata(Model::Driver)
-    Log = ::Log.for("mqtt.router.driver")
+    Log = ::Log.for(self)
 
     private getter mappings : Mappings
-    private getter publisher_manager : PublisherManager
+    private getter publisher_managers : Array(PublisherManager)
 
-    def initialize(@mappings : Mappings, @publisher_manager : PublisherManager = PublisherManager.instance)
+    def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
       super()
     end
 
-    def process_resource(event) : Resource::Result
-      action = event[:action]
-      driver = event[:resource]
+    def process_resource(action : Resource::Action, resource : Model::Driver) : Resource::Result
+      driver = resource
       driver_id = driver.id.as(String)
 
       hierarchy_zones = Mappings.hierarchy_zones(driver)

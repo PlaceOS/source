@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::MQTT
+module PlaceOS::Ingest
   def self.mock_zones
     Mappings.hierarchy.map_with_index do |tag, idx|
       zone = Model::Generator.zone

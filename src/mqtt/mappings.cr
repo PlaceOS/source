@@ -5,14 +5,14 @@ require "rwlock"
 
 require "./constants"
 
-module PlaceOS::MQTT
+module PlaceOS::Ingest
   # Consolidated data object maintaining mappings
   #
   # Handles...
   # - topic generation for MQTT
   # - distinguishing whether model metadata should be published
   class Mappings
-    Log = ::Log.for("mqtt.mappings")
+    Log = ::Log.for(self)
 
     class_getter scope : String = HIERARCHY.first? || abort "Hierarchy must contain at least one scope"
     class_getter hierarchy : Array(String) = HIERARCHY
@@ -24,11 +24,9 @@ module PlaceOS::MQTT
     # State Keys
     ###########################################################################
 
-    # Generates topic keys if event is to be published.
+    # Generates metadata for Status events topic keys if the event is to be published.
     #
-    # Keys are in the format below.
-    # `placeos/<scope zone>/state/<2nd zone_id>/../<nth zone_id>/<system_id>/<driver_id>/<module_name>/<index>/<status>`
-    def state_event_keys?(module_id : String, status : String) : Array(String)?
+    def status_events?(module_id : String, status : String) : Array(Status)?
       read do |state|
         # Check if module is in any relevant ControlSystems
         system_modules = state.system_modules[module_id]?
@@ -49,51 +47,32 @@ module PlaceOS::MQTT
           # Lookup hierarchical Zones for the system
           zone_mapping = state.system_zones[control_system_id]?
           if zone_mapping
-            key_data = {
-              status:            status,
-              index:             system_mapping[:index],
-              module_name:       system_mapping[:name],
-              driver_id:         driver_id,
+            Status.new(
+              status: status,
+              index: system_mapping[:index],
+              module_name: system_mapping[:name],
+              module_id: module_id,
+              driver_id: driver_id,
               control_system_id: control_system_id,
-              zone_mapping:      zone_mapping,
-            }
-
-            key = Mappings.generate_status_key?(**key_data)
-
-            Log.debug { key_data.merge({message: "could not generate key"}) } if key.nil?
-
-            key
+              zone_mapping: zone_mapping,
+            )
           end
         end
       end
     end
 
-    # Construct a Module `state` key
-    #
-    # If a ZoneMapping is missing, the corresponding hierarchy value will be '_'
-    def self.generate_status_key?(
+    record Status,
       status : String,
       index : Int32,
       module_name : String,
+      module_id : String,
       driver_id : String,
       control_system_id : String,
       zone_mapping : Hash(String, String)
-    ) : String?
-      # Look up zone or replace with _ if not present
-      hierarchy_values = HIERARCHY.map { |key| zone_mapping[key]? || "_" }
 
-      # Get concrete values
-      scope_value = hierarchy_values.first?
+    record Metadata, model_id : String, scope : String = Mappings.scope
 
-      # Prevent publishing events with unspecified top-level scope
-      return if scope_value.nil? || scope_value == "_"
-
-      subhierarchy_values = hierarchy_values[1..]
-
-      module_key = File.join(control_system_id, driver_id, module_name, index.to_s, status)
-
-      "#{MQTT_NAMESPACE}/#{scope_value}/state/#{File.join(subhierarchy_values)}/#{module_key}"
-    end
+    alias Data = Status | Metadata
 
     # Hierarchy and Scoping
     ###########################################################################
@@ -105,33 +84,35 @@ module PlaceOS::MQTT
     # Caches are only for quick lookups when processing events.
     def self.hierarchy_zones(model : Scoped) : Array(Model::Zone)
       case model
-      when Model::ControlSystem
+      in Model::ControlSystem
         Model::Zone
           .find_all(model.zones.as(Array(String)))
           .reject { |zone| hierarchy_tag?(zone).nil? }
           .to_a
-      when Model::Driver
+      in Model::Driver
         Model::Module
           .by_driver_id(model.id.as(String))
           .flat_map { |mod| hierarchy_zones(mod) }
           .uniq
           .to_a
-      when Model::Module
+      in Model::Module
         Model::ControlSystem
           .by_module_id(model.id.as(String))
           .flat_map { |cs| hierarchy_zones(cs) }
           .uniq
           .to_a
-      when Model::Zone
+      in Model::Zone
         zone = model.parent || model
         if hierarchy_tag?(zone) == Mappings.scope
           [zone]
         else
           [] of Model::Zone
         end
-      end.as(Array(Model::Zone))
+      end
     end
 
+    # Calculate the hiearchy tag for a Zone
+    #
     def self.hierarchy_tag?(zone : Model::Zone) : String?
       hierarchy_tags = zone.tags.as(Set(String)) & hierarchy_set
 

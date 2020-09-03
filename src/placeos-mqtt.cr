@@ -1,6 +1,7 @@
 require "log_helper"
+require "./mqtt/constants"
 
-module PlaceOS::MQTT
+module PlaceOS::Ingest
 end
 
 require "./mqtt/*"

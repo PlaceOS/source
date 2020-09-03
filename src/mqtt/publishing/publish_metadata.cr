@@ -4,16 +4,22 @@ require "./publisher"
 require "./publisher_manager"
 require "../mappings"
 
-module PlaceOS::MQTT
+module PlaceOS::Ingest
   module PublishMetadata(Model)
-    abstract def publisher_manager : PublisherManager
+    abstract def publisher_managers : Array(PublisherManager)
 
-    # Publish to the metadata topic
+    # Publish model metadata
+    #
+    # Only models in the top-level hiearchy are published
     def publish_metadata(zone : ::PlaceOS::Model::Zone, model : Model)
       if Mappings.hierarchy_tag?(zone) == Mappings.scope
-        payload = model.destroyed? ? nil : model.to_json
+        message = Publisher::Message.new(
+          data: Mappings::Metadata.new(model.id.as(String)),
+          payload: model.destroyed? ? nil : model.to_json,
+        )
+
         # Fire off broadcast
-        spawn { publisher_manager.broadcast(Publisher.metadata(Mappings.scope, model.id.as(String), payload)) }
+        spawn { publisher_managers.each &.broadcast(message) }
       end
     end
   end

@@ -7,19 +7,27 @@ def expected_payload(value)
   %({"time":0,"value":#{value.to_json}})
 end
 
-module PlaceOS::MQTT
-  class Publisher
+module PlaceOS::Ingest
+  abstract class Publisher
     # Mock the timestamp
     def self.timestamp : Time
       Time::UNIX_EPOCH
     end
   end
 
-  class MockManager < PublisherManager
-    getter messages : Array(Publisher::Metadata | Publisher::State) = [] of Publisher::Metadata | Publisher::State
+  class MockManager
+    include PublisherManager
+
+    getter messages : Array(Publisher::Message) = [] of Publisher::Message
 
     def broadcast(message)
       messages << message
+    end
+
+    def start
+    end
+
+    def stop
     end
   end
 
