@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   def self.mock_zones
     Mappings.hierarchy.map_with_index do |tag, idx|
       zone = Model::Generator.zone

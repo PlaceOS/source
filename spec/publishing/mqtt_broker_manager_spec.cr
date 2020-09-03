@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   describe MqttBrokerManager do
     it "creates MQTT publishing clients" do
       model = Model::Broker.new(

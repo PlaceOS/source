@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   describe Mappings do
     describe "status_events?" do
       it "generates data for status events" do

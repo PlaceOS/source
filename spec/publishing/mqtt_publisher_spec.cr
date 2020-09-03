@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   describe MqttPublisher do
     describe "keys" do
       it "creates a state event topic" do

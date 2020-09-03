@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   describe StatusEvents do
     it "passes status events to PublisherManager" do
       # module_id = "mod-hello_hello"

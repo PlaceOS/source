@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   describe Router::Zone do
     it "ignores Zones without a tag in the hierarchy" do
       Model::Zone.clear

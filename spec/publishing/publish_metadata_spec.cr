@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   record MockModel, id : String, some_data : String do
     include JSON::Serializable
 
@@ -21,7 +21,7 @@ module PlaceOS::Ingest
 
   class Dummy
     include PublishMetadata(MockModel)
-    getter publisher_managers : Array(PlaceOS::Ingest::MockManager) = [PlaceOS::Ingest::MockManager.new]
+    getter publisher_managers : Array(PlaceOS::Source::MockManager) = [PlaceOS::Source::MockManager.new]
   end
 
   describe PublishMetadata do

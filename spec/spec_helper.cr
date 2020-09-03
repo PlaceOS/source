@@ -2,12 +2,13 @@ require "spec"
 require "placeos-models/spec/generator"
 
 require "../src/placeos-source"
+require "../src/source/*"
 
 def expected_payload(value)
   %({"time":0,"value":#{value.to_json}})
 end
 
-module PlaceOS::Ingest
+module PlaceOS::Source
   abstract class Publisher
     # Mock the timestamp
     def self.timestamp : Time
