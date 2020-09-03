@@ -49,8 +49,20 @@ module PlaceOS::Source
     end
   end
 
+  publisher_managers = [] of PublisherManager
+
+  publisher_managers << MqttBrokerManager.new
+
+  influx_host, influx_api_key = INFLUX_HOST, INFLUX_API_KEY
+
+  # Add Influx to sources if adequate environmental configuration is present
+  publisher_managers << InfluxManager.new(influx_host, influx_api_key) unless influx_host.nil? || influx_api_key.nil?
+
   # Start application manager
-  PlaceOS::Source::Manager.instance.start
+  manager = Manager.new(publisher_managers)
+  manager.start
+
+  Manager.instance = manager
 
   # Server Configuration
 

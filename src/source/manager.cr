@@ -17,7 +17,7 @@ module PlaceOS::Source
 
     getter? started = false
 
-    class_getter instance : self { new }
+    class_property instance : self { new }
 
     def initialize(
       @publisher_managers : Array(PublisherManager) = [] of PublisherManager,
