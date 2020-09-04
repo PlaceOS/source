@@ -16,6 +16,8 @@ module PlaceOS::Source
     getter client : Flux::Client
     getter bucket : String
 
+    alias Value = Bool | Float64 | Int64 | String | Nil
+
     def initialize(@client : Flux::Client, @bucket : String)
     end
 
@@ -36,12 +38,12 @@ module PlaceOS::Source
 
     # Generate an InfluxDB Point from an mqtt key + payload
     #
-    def self.transform(message : Publisher::Message, timestamp : Time = self.timesamp) : Flux::Point?
+    def self.transform(message : Publisher::Message, timestamp : Time = Publisher.timestamp) : Flux::Point?
       data = message.data
       # Only Module status events are persisted
       return unless data.is_a? Mappings::Status
 
-      payload = data.payload.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
+      payload = message.payload.try &.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
         hmac_sha256(match_string)
       end
 
@@ -49,6 +51,20 @@ module PlaceOS::Source
         :org      => data.zone_mapping["org"],
         :building => data.zone_mapping["building"],
       }.compact
+
+      value = begin
+        raw = JSON.parse(payload).raw unless payload.nil?
+
+        if raw.is_a?(Value)
+          raw
+        else
+          Log.info { "could not extract InfluxDB value type from status value" }
+          nil
+        end
+      rescue e : JSON::ParseException
+        Log.warn { {message: "failed to parse status event after filtering", payload: payload} }
+        nil
+      end
 
       Flux::Point.new!(
         measurement: data.module_name,
@@ -58,9 +74,9 @@ module PlaceOS::Source
         area: data.zone_mapping["area"],
         system: data.control_system_id,
         driver: data.driver_id,
-        index: data.index,
+        index: data.index.to_i64,
         state: data.status,
-        value: payload,
+        value: value,
       )
     end
 

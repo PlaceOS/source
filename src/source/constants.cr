@@ -19,7 +19,7 @@ module PlaceOS::Source
   MQTT_NAMESPACE = "placeos"
 
   FILTER_SECRET   = ENV["PLACE_FILTER_SECRET"]? || Random::Secure.hex(64)
-  DEFAULT_FILTERS = parse_environmental_regex(ENV["PLACE_DEFAULT_FILTERS"]) || [/\A([\w+\-].?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i]
+  DEFAULT_FILTERS = parse_environmental_regex?(ENV["PLACE_DEFAULT_FILTERS"]?) || [/\A([\w+\-].?)+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i]
 
   REDIS_URL = ENV["REDIS_URL"]?
 
@@ -34,15 +34,16 @@ module PlaceOS::Source
   protected def self.parse_environmental_regex?(string : String?)
     result = string.try do |s|
       s.split(',').compact_map do |regex_source|
-        error = Regex.error(regex_source)
+        error = Regex.error?(regex_source)
         if error.nil?
           Regex.new(regex_source)
         else
           Log.error { "#{regex_source} is an invalid regex: #{error}" }
+          nil
         end
       end
     end
 
-    result.empty? ? nil : result
+    result.nil? || result.empty? ? nil : result
   end
 end
