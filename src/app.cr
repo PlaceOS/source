@@ -1,12 +1,12 @@
 require "option_parser"
 
 require "./config"
-require "./mqtt/constants"
+require "./source/constants"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   # Server defaults
-  host = ENV["PLACE_MQTT_HOST"]? || "127.0.0.1"
-  port = (ENV["PLACE_MQTT_PORT"]? || 3000).to_i
+  host = DEFAULT_MQTT_HOST
+  port = DEFAULT_MQTT_PORT
 
   # Command line options
   OptionParser.parse(ARGV.dup) do |parser|
@@ -49,8 +49,20 @@ module PlaceOS::MQTT
     end
   end
 
+  publisher_managers = [] of PublisherManager
+
+  publisher_managers << MqttBrokerManager.new
+
+  influx_host, influx_api_key = INFLUX_HOST, INFLUX_API_KEY
+
+  # Add Influx to sources if adequate environmental configuration is present
+  publisher_managers << InfluxManager.new(influx_host, influx_api_key) unless influx_host.nil? || influx_api_key.nil?
+
   # Start application manager
-  PlaceOS::MQTT::Manager.instance.start
+  manager = Manager.new(publisher_managers)
+  manager.start
+
+  Manager.instance = manager
 
   # Server Configuration
 

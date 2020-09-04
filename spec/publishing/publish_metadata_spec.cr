@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   record MockModel, id : String, some_data : String do
     include JSON::Serializable
 
@@ -9,8 +9,10 @@ module PlaceOS::MQTT
     end
   end
 
-  class MockManager < PublisherManager
-    getter messages : Array(Publisher::Metadata | Publisher::State) = [] of Publisher::Metadata | Publisher::State
+  class MockManager
+    include PublisherManager
+
+    getter messages : Array(Publisher::Message) = [] of Publisher::Message
 
     def broadcast(message)
       messages << message
@@ -19,7 +21,7 @@ module PlaceOS::MQTT
 
   class Dummy
     include PublishMetadata(MockModel)
-    getter publisher_manager : MockManager = MockManager.new
+    getter publisher_managers : Array(PlaceOS::Source::MockManager) = [PlaceOS::Source::MockManager.new]
   end
 
   describe PublishMetadata do
@@ -32,27 +34,26 @@ module PlaceOS::MQTT
 
       Fiber.yield
 
-      router.publisher_manager.messages.should be_empty
+      router.publisher_managers.first.messages.should be_empty
     end
 
     it "publishes metadata event if model has a top-level zone" do
       zone = Model::Generator.zone
       zone.tags = Set{Mappings.scope, "not", "top", "level"}
-      mock = MockModel.new(id: "hello", some_data: "edkh")
+
+      payload = {id: "hello", some_data: "edkh"}
+      mock = MockModel.new(**payload)
 
       router = Dummy.new
       router.publish_metadata(zone, mock)
 
-      expected_message = Publisher.metadata(scope: Mappings.scope, id: mock.id, payload: mock.to_json)
-
       Fiber.yield
 
-      message = router.publisher_manager.messages.first?
+      message = router.publisher_managers.first.messages.first?
       message.should_not be_nil
       message = message.not_nil!
-
-      message.key.should eq expected_message.key
-      message.payload.should eq expected_message.payload
+      message.data.should eq Mappings::Metadata.new("hello", "org")
+      message.payload.should eq payload.to_json
     end
   end
 end

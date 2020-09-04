@@ -1,10 +1,10 @@
 require "./mappings"
-require "./publishing/publisher_manager"
+require "./publishing/*"
 require "./router/*"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   class Manager
-    Log = ::Log.for("mqtt.manager")
+    Log = ::Log.for(self)
 
     getter control_system_router : Router::ControlSystem
     getter driver_router : Router::Driver
@@ -13,33 +13,29 @@ module PlaceOS::MQTT
 
     getter status_events : StatusEvents
 
-    getter publisher_manager : PublisherManager
+    getter publisher_managers : Array(PublisherManager)
 
     getter? started = false
 
-    @@instance : Manager?
-
-    def self.instance : Manager
-      (@@instance ||= Manager.new).as(Manager)
-    end
+    class_property instance : self { new }
 
     def initialize(
-      @publisher_manager : PublisherManager = PublisherManager.new,
+      @publisher_managers : Array(PublisherManager) = [] of PublisherManager,
       @mappings : Mappings = Mappings.new
     )
-      @control_system_router = Router::ControlSystem.new(mappings, publisher_manager)
-      @driver_router = Router::Driver.new(mappings, publisher_manager)
+      @control_system_router = Router::ControlSystem.new(mappings, publisher_managers)
+      @driver_router = Router::Driver.new(mappings, publisher_managers)
       @module_router = Router::Module.new(mappings)
-      @zone_router = Router::Zone.new(mappings, publisher_manager)
-      @status_events = StatusEvents.new(mappings, publisher_manager)
+      @zone_router = Router::Zone.new(mappings, publisher_managers)
+      @status_events = StatusEvents.new(mappings, publisher_managers)
     end
 
     def start
       return if started?
       @started = true
 
-      Log.info { "registering Brokers" }
-      publisher_manager.start
+      Log.info { "registering Publishers" }
+      publisher_managers.each &.start
 
       # Acquire the Zones (hierarchy) first
       Log.info { "starting Zone router" }
@@ -68,7 +64,7 @@ module PlaceOS::MQTT
 
       @started = false
       status_events.stop
-      publisher_manager.stop
+      publisher_managers.each &.stop
       control_system_router.stop
       driver_router.stop
       module_router.stop

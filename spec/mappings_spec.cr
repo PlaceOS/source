@@ -1,9 +1,9 @@
 require "./spec_helper"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   describe Mappings do
-    describe "state_event_keys?" do
-      it "creates a state event topic" do
+    describe "status_events?" do
+      it "generates data for status events" do
         state = mock_state(
           module_id: "mod-1234",
           index: 1,
@@ -17,41 +17,19 @@ module PlaceOS::MQTT
         )
 
         mappings = Mappings.new(state)
-        keys = mappings.state_event_keys?("mod-1234", "power")
-        keys.should_not be_nil
-        keys.not_nil!.first?.should eq "placeos/org-donor/state/cards/nek/2042/cs-9445/12345/M'Odule/1/power"
-      end
+        events = mappings.status_events?("mod-1234", "power")
+        events.should_not be_nil
+        event = events.not_nil!.first
+        event.module_id.should eq "mod-1234"
+        event.index.should eq 1
+        event.module_name.should eq "M'Odule"
+        event.driver_id.should eq "12345"
+        event.control_system_id.should eq "cs-9445"
 
-      it "doesn't create topics for Modules without a top-level scope Zone" do
-        state = mock_state(module_id: "mod-1234", control_system_id: "cs-id")
-
-        # Remove the top level scope mapping
-        state.system_zones["cs-id"].delete(Mappings.scope)
-
-        mappings = Mappings.new(state)
-        keys = mappings.state_event_keys?("mod-1234", "power")
-        keys.should_not be_nil
-        keys.not_nil!.should be_empty
-      end
-
-      it "replaces missing hierarchy Zone ids with a placeholder" do
-        state = mock_state(
-          module_id: "mod-1234",
-          index: 1,
-          module_name: "M'Odule",
-          driver_id: "12345",
-          control_system_id: "cs-9445",
-          area_id: "2042",
-          level_id: "nek",
-          org_id: "org-donor",
-        )
-
-        state.system_zones["cs-9445"].delete("building")
-
-        mappings = Mappings.new(state)
-        keys = mappings.state_event_keys?("mod-1234", "power")
-        keys.should_not be_nil
-        keys.not_nil!.first?.should eq "placeos/org-donor/state/_/nek/2042/cs-9445/12345/M'Odule/1/power"
+        event.zone_mapping["area"].should eq "2042"
+        event.zone_mapping["level"].should eq "nek"
+        event.zone_mapping["building"].should eq "cards"
+        event.zone_mapping["org"].should eq "org-donor"
       end
     end
 

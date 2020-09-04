@@ -1,20 +1,17 @@
 require "placeos-models/broker"
-require "rwlock"
+require "placeos-resource"
 
 require "./publisher"
-require "../resource"
+require "./mqtt_publisher"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   # Create and maintain Publishers from Brokers
-  class PublisherManager < Resource(Model::Broker)
-    Log = ::Log.for("mqtt.publisher_manager")
+  class MqttBrokerManager < Resource(Model::Broker)
+    include PublisherManager
 
-    @@instance : PublisherManager?
+    Log = ::Log.for(self)
 
-    # Class to be used as a singleton
-    def self.instance : PublisherManager
-      (@@instance ||= PublisherManager.new).as(PublisherManager)
-    end
+    class_getter instance : self { new }
 
     # Broadcast a message to each MQTT Broker
     #
@@ -26,44 +23,42 @@ module PlaceOS::MQTT
       end
     end
 
-    def process_resource(event) : Resource::Result
-      model = event[:resource]
-
-      # Don't recreat the publisher if only safe attributes changed
-      case event[:action]
-      when Resource::Action::Created
-        create_publisher(model)
-      when Resource::Action::Updated
-        if PublisherManager.safe_update?(model)
-          update_publisher(model)
+    def process_resource(action : Resource::Action, resource : Model::Broker) : Resource::Result
+      # Don't recreate the publisher if only "safe" attributes have changed
+      case action
+      in Resource::Action::Created
+        create_publisher(resource)
+      in Resource::Action::Updated
+        if MqttBrokerManager.safe_update?(resource)
+          update_publisher(resource)
         else
           # Recreate the publisher
-          create_publisher(model)
+          create_publisher(resource)
         end
-      when Resource::Action::Deleted
-        remove_publisher(model)
-      end.as(Resource::Result)
+      in Resource::Action::Deleted
+        remove_publisher(resource)
+      end
     end
 
     # Attributes that can change without recreating the publisher
     SAFE_ATTRIBUTES = [:name, :description, :filters]
 
-    # Create a `Publisher` for the `Broker`
+    # Create a `MqttPublisher` for the `Broker`
     #
     protected def create_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
-      publisher = Publisher.new(broker)
+      publisher = MqttPublisher.new(broker)
       write_publishers do |publishers|
         # Close off exisiting publisher, if present
         existing = publishers[broker_id]?
-        existing.close unless existing.nil?
+        existing.stop unless existing.nil?
         publishers[broker_id] = publisher
       end
 
       Resource::Result::Success
     end
 
-    # Update safe fields on the `Publisher`'s `Broker`
+    # Update safe fields on the `MqttPublisher`'s `Broker`
     #
     protected def update_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
@@ -83,7 +78,7 @@ module PlaceOS::MQTT
       success ? Resource::Result::Success : create_publisher(broker)
     end
 
-    # Close and remove the `Publisher` for the `Broker`
+    # Close and remove the `MqttPublisher` for the `Broker`
     #
     private def remove_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
@@ -91,13 +86,13 @@ module PlaceOS::MQTT
         publishers.delete(broker_id)
       end
 
-      existing.close unless existing.nil?
+      existing.stop unless existing.nil?
 
       Resource::Result::Success
     end
 
     # Mapping from broker_id to an MQTT publisher
-    @publishers : Hash(String, Publisher) = {} of String => Publisher
+    @publishers : Hash(String, MqttPublisher) = {} of String => MqttPublisher
 
     private getter publishers_lock : RWLock = RWLock.new
 

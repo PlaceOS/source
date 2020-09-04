@@ -1,25 +1,34 @@
 require "spec"
 require "placeos-models/spec/generator"
 
-require "../src/placeos-mqtt"
+require "../src/placeos-source"
+require "../src/source/*"
 
 def expected_payload(value)
   %({"time":0,"value":#{value.to_json}})
 end
 
-module PlaceOS::MQTT
-  class Publisher
+module PlaceOS::Source
+  abstract class Publisher
     # Mock the timestamp
     def self.timestamp : Time
       Time::UNIX_EPOCH
     end
   end
 
-  class MockManager < PublisherManager
-    getter messages : Array(Publisher::Metadata | Publisher::State) = [] of Publisher::Metadata | Publisher::State
+  class MockManager
+    include PublisherManager
+
+    getter messages : Array(Publisher::Message) = [] of Publisher::Message
 
     def broadcast(message)
       messages << message
+    end
+
+    def start
+    end
+
+    def stop
     end
   end
 

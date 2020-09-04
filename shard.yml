@@ -1,25 +1,28 @@
-name: placeos-mqtt
-version: 0.2.0
+name: placeos-source
+version: 1.0.0
 crystal: 0.35.1
 
 targets:
-  mqtt:
+  source:
     main: src/app.cr
 
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
 
+  flux:
+    github: place-labs/flux
+
   mqtt:
     github: spider-gazelle/crystal-mqtt
 
-  placeos-core:
-    github: placeos/core
-    version: ~> 2.3
-
   placeos-models:
     github: placeos/models
-    version: ~> 3
+    version: ~> 4
+
+  placeos-resource:
+    github: place-labs/resource
+    version: ~> 1
 
   redis:
     github: stefanwille/crystal-redis
@@ -27,10 +30,14 @@ dependencies:
 
   rethinkdb-orm:
     github: spider-gazelle/rethinkdb-orm
-    version: ~> 2.10
+    version: ~> 3
 
   rwlock:
     github: spider-gazelle/readers-writer
+
+  secrets-env:
+    github: place-labs/secrets-env
+    version: ~> 1
 
   simple_retry:
     github: spider-gazelle/simple_retry

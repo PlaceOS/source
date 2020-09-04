@@ -1,6 +1,6 @@
 require "../spec_helper"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   describe Router::Module do
     describe "system_modules" do
       pending "updates on changes to Module name" do

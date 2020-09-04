@@ -1,13 +1,13 @@
 require "placeos-models/control_system"
 require "placeos-models/zone"
+require "placeos-resource"
 
 require "../mappings"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
-require "../resource"
 
-module PlaceOS::MQTT::Router
-  # System router (If correctly scoped)
+module PlaceOS::Source::Router
+  # ControlSystem router (If correctly scoped)
   # - Publishes metadata
   # - Listens for changes to the `zones` array
   #   + maintain system_zones
@@ -16,12 +16,12 @@ module PlaceOS::MQTT::Router
   # - Remove references to ControlSystem on destroy
   class ControlSystem < Resource(PlaceOS::Model::ControlSystem)
     include PublishMetadata(PlaceOS::Model::ControlSystem)
-    Log = ::Log.for("mqtt.router.control_system")
+    Log = ::Log.for(self)
 
     private getter mappings : Mappings
-    private getter publisher_manager : PublisherManager
+    private getter publisher_managers : Array(PublisherManager)
 
-    def initialize(@mappings : Mappings, @publisher_manager : PublisherManager = PublisherManager.instance)
+    def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
       super()
     end
 
@@ -57,8 +57,8 @@ module PlaceOS::MQTT::Router
       Resource::Result::Success
     end
 
-    def process_resource(event) : Resource::Result
-      control_system = event[:resource]
+    def process_resource(action : Resource::Action, resource : PlaceOS::Model::ControlSystem) : Resource::Result
+      control_system = resource
 
       hierarchy_zones = Mappings.hierarchy_zones(control_system)
       return Resource::Result::Skipped if hierarchy_zones.empty?
@@ -67,14 +67,14 @@ module PlaceOS::MQTT::Router
         publish_metadata(zone, control_system)
       end
 
-      case event[:action]
-      when Resource::Action::Created
+      case action
+      in Resource::Action::Created
         handle_create(control_system)
-      when Resource::Action::Updated
+      in Resource::Action::Updated
         handle_update(control_system)
-      when Resource::Action::Deleted
+      in Resource::Action::Deleted
         handle_delete(control_system)
-      end.as(Resource::Result)
+      end
     end
 
     # Create/update a mapping for ControlSystem's Zones

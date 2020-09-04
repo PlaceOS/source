@@ -5,19 +5,19 @@ require "./mappings"
 require "./publishing/publisher"
 require "./publishing/publisher_manager"
 
-module PlaceOS::MQTT
+module PlaceOS::Source
   class StatusEvents
-    Log = ::Log.for("mqtt.status_events")
+    Log = ::Log.for(self)
 
     STATUS_CHANNEL_PATTERN = "status/*"
 
     getter redis : Redis
     private getter mappings : Mappings
-    private getter publisher_manager : PublisherManager
+    private getter publisher_managers : Array(PublisherManager)
 
     private property? stopped : Bool = true
 
-    def initialize(@mappings : Mappings, @publisher_manager : PublisherManager, @redis : Redis = StatusEvents.new_redis)
+    def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager), @redis : Redis = StatusEvents.new_redis)
     end
 
     def start
@@ -47,10 +47,11 @@ module PlaceOS::MQTT
 
     protected def handle_pevent(pattern : String, channel : String, payload : String)
       module_id, status = StatusEvents.parse_channel(channel)
-      keys = mappings.state_event_keys?(module_id, status)
-      if keys
-        keys.each do |key|
-          publisher_manager.broadcast(Publisher.state(key, payload))
+      events = mappings.status_events?(module_id, status)
+      if events
+        events.each do |event|
+          message = Publisher::Message.new(event, payload)
+          publisher_managers.each &.broadcast(message)
         end
       end
     end
@@ -61,7 +62,7 @@ module PlaceOS::MQTT
     end
 
     protected def self.new_redis
-      Redis.new(url: ENV["REDIS_URL"]?)
+      Redis.new(url: REDIS_URL)
     end
   end
 end

@@ -1,7 +1,7 @@
 require "../spec_helper"
 
-module PlaceOS::MQTT
-  describe PublisherManager do
+module PlaceOS::Source
+  describe MqttBrokerManager do
     it "creates MQTT publishing clients" do
       model = Model::Broker.new(
         name: "mosquitto",
@@ -12,7 +12,7 @@ module PlaceOS::MQTT
       model.id = id
 
       event = {action: Resource::Action::Created, resource: model}
-      publisher_manager = PublisherManager.new
+      publisher_manager = MqttBrokerManager.new
       publisher_manager.@event_channel.send(event)
       publisher_manager.start
 

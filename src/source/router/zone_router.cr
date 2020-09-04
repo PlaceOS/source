@@ -1,12 +1,12 @@
 require "placeos-models/zone"
+require "placeos-resource"
 
 require "../constants"
 require "../mappings"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
-require "../resource"
 
-module PlaceOS::MQTT::Router
+module PlaceOS::Source::Router
   # Zone router (if scoped)...
   # - listens for changes to Zone's tags and update system_zones in Mappings
   # - publishes metadata
@@ -15,12 +15,12 @@ module PlaceOS::MQTT::Router
   # A Zone _SHOULD NOT_ have more than one hierarchical tag
   class Zone < Resource(PlaceOS::Model::Zone)
     include PublishMetadata(PlaceOS::Model::Zone)
-    Log = ::Log.for("mqtt.router.zone")
+    Log = ::Log.for(self)
 
     private getter mappings : Mappings
-    private getter publisher_manager : PublisherManager
+    private getter publisher_managers : Array(PublisherManager)
 
-    def initialize(@mappings : Mappings, @publisher_manager : PublisherManager = PublisherManager.instance)
+    def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
       super()
     end
 
@@ -30,8 +30,8 @@ module PlaceOS::MQTT::Router
     # - remove system zone mappings
     #
     # Publish zone if is scope or under scope
-    def process_resource(event) : Resource::Result
-      zone = event[:resource]
+    def process_resource(action : Resource::Action, resource : PlaceOS::Model::Zone) : Resource::Result
+      zone = resource
 
       hierarchy_zones = Mappings.hierarchy_zones(zone)
       return Resource::Result::Skipped if hierarchy_zones.empty?
