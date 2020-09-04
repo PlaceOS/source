@@ -31,6 +31,17 @@ Metadata topic keys have the following format..
 State topic keys have the following format...
 `placeos/<scope zone>/state/<2nd zone_id>/../<nth zone_id>/<system_id>/<driver_id>/<module_name>/<index>/<status>`
 
+## InfluxDB
+
+`source` can optionally write status events to InfluxDB.
+To configure `source` as an InfluxDB writer, set the following...
+- `INFLUX_HOST`: required.
+- `INFLUX_API_KEY`: required.
+- `INFLUX_ORG`: defaults to `"placeos"`
+- `INFLUX_BUCKET`: defaults to `"place"`
+
+Note: The InfluxDB writer obeys the default Zone hierarchy of `org,building,level,area`
+
 ## Contributors
 
 - [Caspian Baska](https://github.com/caspiano) - creator and maintainer
