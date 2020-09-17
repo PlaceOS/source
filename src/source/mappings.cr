@@ -150,7 +150,7 @@ module PlaceOS::Source
     def set_system_modules(control_system_id : String, system_modules : Hash(String, SystemModule))
       write do |state|
         # Clear mappings of all references to control_system_id
-        remove_system_modules(control_system_id)
+        remove_control_system_references(control_system_id)
 
         system_modules.each do |module_id, new_mapping|
           state.system_modules[module_id] << new_mapping
@@ -161,11 +161,18 @@ module PlaceOS::Source
     # Remove System Module Mappings
     def remove_system_modules(control_system_id : String)
       # Clear mappings of all references to control_system_id
-      write do |state|
-        # Clear mappings of all references to control_system_id
-        state.system_modules.transform_values do |mappings|
-          mappings.reject! { |sys_mod| sys_mod[:control_system_id] == control_system_id }
-        end
+      write do
+        remove_control_system_references(control_system_id)
+      end
+    end
+
+    # Clear mappings of all references to control_system_id
+    # Note: This method alone is not threadsafe.
+    #
+    # TODO: Inline in `remove_system_modules` when RW lock is reentrant to writes
+    private def remove_control_system_references(control_system_id : String)
+      @state.system_modules.transform_values do |mappings|
+        mappings.reject! { |sys_mod| sys_mod[:control_system_id] == control_system_id }
       end
     end
 
