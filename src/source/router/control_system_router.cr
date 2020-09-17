@@ -61,18 +61,17 @@ module PlaceOS::Source::Router
       control_system = resource
 
       hierarchy_zones = Mappings.hierarchy_zones(control_system)
-      return Resource::Result::Skipped if hierarchy_zones.empty?
 
-      hierarchy_zones.each do |zone|
-        publish_metadata(zone, control_system)
-      end
+      return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
+
+      hierarchy_zones.each { |zone| publish_metadata(zone, control_system) }
 
       case action
-      in Resource::Action::Created
+      in .created?
         handle_create(control_system)
-      in Resource::Action::Updated
+      in .updated?
         handle_update(control_system)
-      in Resource::Action::Deleted
+      in .deleted?
         handle_delete(control_system)
       end
     end

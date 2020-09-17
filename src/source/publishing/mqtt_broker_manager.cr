@@ -26,16 +26,16 @@ module PlaceOS::Source
     def process_resource(action : Resource::Action, resource : Model::Broker) : Resource::Result
       # Don't recreate the publisher if only "safe" attributes have changed
       case action
-      in Resource::Action::Created
+      in .created?
         create_publisher(resource)
-      in Resource::Action::Updated
+      in .updated?
         if MqttBrokerManager.safe_update?(resource)
           update_publisher(resource)
         else
           # Recreate the publisher
           create_publisher(resource)
         end
-      in Resource::Action::Deleted
+      in .deleted?
         remove_publisher(resource)
       end
     end

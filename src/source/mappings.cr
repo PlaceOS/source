@@ -175,17 +175,20 @@ module PlaceOS::Source
 
     # Wrapper for Mapping state
     class State
+      include JSON::Serializable
+
       # module_id => [{control_system_id: String, index: Int32}]
-      getter system_modules : Hash(String, Array(SystemModule)) = Hash(String, Array(SystemModule)).new { [] of SystemModule }
+      getter system_modules : Hash(String, Array(SystemModule)) = Hash(String, Array(SystemModule)).new { |h, k| h[k] = [] of SystemModule }
 
       # module_id => driver_id
       getter drivers : Hash(String, String) = {} of String => String
 
       # control_system_id => { hierarchy_tag => zone_id }
       getter system_zones : Hash(String, Hash(String, String)) = {} of String => Hash(String, String)
-    end
 
-    @state : State
+      def initialize
+      end
+    end
 
     private getter mappings_lock : RWLock = RWLock.new
 
@@ -199,7 +202,12 @@ module PlaceOS::Source
     # Synchronized write access to `Mappings`
     def write
       mappings_lock.write do
-        yield @state
+        v = yield @state
+        Log.debug { {
+          message:  "wrote mappings",
+          mappings: @state.to_json,
+        } }
+        v
       end
     end
   end

@@ -52,14 +52,14 @@ module PlaceOS::Source::Router
       mod = resource
 
       hierarchy_zones = Mappings.hierarchy_zones(mod)
-      return Resource::Result::Skipped if hierarchy_zones.empty?
+      return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
 
       case action
-      in Resource::Action::Created
+      in .created?
         handle_create(mod)
-      in Resource::Action::Updated
+      in .updated?
         handle_update(mod)
-      in Resource::Action::Deleted
+      in .deleted?
         handle_delete(mod)
       end
     end

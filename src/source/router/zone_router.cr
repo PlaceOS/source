@@ -34,7 +34,7 @@ module PlaceOS::Source::Router
       zone = resource
 
       hierarchy_zones = Mappings.hierarchy_zones(zone)
-      return Resource::Result::Skipped if hierarchy_zones.empty?
+      return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
 
       hierarchy_zones.each do |parent_zone|
         publish_metadata(parent_zone, zone)

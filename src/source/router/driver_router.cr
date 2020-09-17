@@ -25,13 +25,14 @@ module PlaceOS::Source::Router
       driver_id = driver.id.as(String)
 
       hierarchy_zones = Mappings.hierarchy_zones(driver)
-      return Resource::Result::Skipped if hierarchy_zones.empty?
+
+      return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
 
       hierarchy_zones.each do |zone|
         publish_metadata(zone, driver)
       end
 
-      if action == Resource::Action::Deleted
+      if action.deleted?
         mappings.write do |state|
           # Remove references to this Driver
           state.drivers.reject! { |_, id| id == driver_id }
