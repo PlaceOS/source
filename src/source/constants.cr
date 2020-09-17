@@ -4,7 +4,7 @@ require "random"
 
 module PlaceOS::Source
   API_VERSION = "v1"
-  APP_NAME    = "mqtt"
+  APP_NAME    = "source"
   VERSION     = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
 
   INFLUX_HOST    = ENV["INFLUX_HOST"]?
@@ -12,10 +12,10 @@ module PlaceOS::Source
   INFLUX_ORG     = ENV["INFLUX_ORG"]? || "placeos"
   INFLUX_BUCKET  = ENV["INFLUX_BUCKET"]? || "place"
 
-  DEFAULT_MQTT_HOST = ENV["PLACE_MQTT_HOST"]? || "127.0.0.1"
-  DEFAULT_MQTT_PORT = (ENV["PLACE_MQTT_PORT"]? || 3000).to_i
+  DEFAULT_HOST = ENV["PLACE_SOURCE_HOST"]? || "127.0.0.1"
+  DEFAULT_PORT = (ENV["PLACE_SOURCE_PORT"]? || 3000).to_i
 
-  HIERARCHY      = ENV["PLACE_MQTT_HIERARCHY"]?.try(&.split(' ')) || ["org", "building", "level", "area"]
+  HIERARCHY      = ENV["PLACE_HIERARCHY"]?.try(&.split(' ')) || ["org", "building", "level", "area"]
   MQTT_NAMESPACE = "placeos"
 
   FILTER_SECRET   = ENV["PLACE_FILTER_SECRET"]? || Random::Secure.hex(64)

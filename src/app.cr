@@ -5,8 +5,8 @@ require "./source/constants"
 
 module PlaceOS::Source
   # Server defaults
-  host = DEFAULT_MQTT_HOST
-  port = DEFAULT_MQTT_PORT
+  host = DEFAULT_HOST
+  port = DEFAULT_PORT
 
   # Command line options
   OptionParser.parse(ARGV.dup) do |parser|
