@@ -114,7 +114,7 @@ shards:
 
   rwlock:
     git: https://github.com/spider-gazelle/readers-writer.git
-    version: 1.0.5
+    version: 1.0.6
 
   secrets-env:
     git: https://github.com/place-labs/secrets-env.git
