@@ -47,9 +47,10 @@ module PlaceOS::Source
         hmac_sha256(match_string)
       end
 
+      # Namespace tags and fields to reduce likely hood that they clash with status names
       tags = Hash(Symbol, String?){
-        :org      => data.zone_mapping["org"],
-        :building => data.zone_mapping["building"],
+        :pos_org      => data.zone_mapping["org"],
+        :pos_building => data.zone_mapping["building"],
       }.compact
 
       value = begin
@@ -66,18 +67,18 @@ module PlaceOS::Source
         nil
       end
 
-      Flux::Point.new!(
+      point = Flux::Point.new!(
         measurement: data.module_name,
         timestamp: timestamp,
         tags: tags,
-        level: data.zone_mapping["level"],
-        area: data.zone_mapping["area"],
-        system: data.control_system_id,
-        driver: data.driver_id,
-        index: data.index.to_i64,
-        state: data.status,
-        value: value,
+        pos_level: data.zone_mapping["level"],
+        pos_area: data.zone_mapping["area"],
+        pos_system: data.control_system_id,
+        pos_driver: data.driver_id,
+        pos_index: data.index.to_i64,
       )
+      point.fields[%("#{data.status}")] = value
+      point
     end
 
     protected def self.hmac_sha256(data : String)
