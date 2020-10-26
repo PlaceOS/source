@@ -59,6 +59,7 @@ module PlaceOS::Source
 
     # Generate an InfluxDB Point from an mqtt key + payload
     #
+    # ameba:disable Metrics/CyclomaticComplexity
     def self.transform(message : Publisher::Message, timestamp : Time = Publisher.timestamp) : Array(Flux::Point)
       data = message.data
       # Only Module status events are persisted
@@ -85,7 +86,7 @@ module PlaceOS::Source
         return NO_POINTS
       end
 
-      value = begin
+      begin
         raw = Value.from_json(payload)
 
         case raw
