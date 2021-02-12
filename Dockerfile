@@ -1,27 +1,8 @@
-FROM crystallang/crystal:0.35.1-alpine
+FROM crystallang/crystal:0.36.1-alpine
 WORKDIR /app
-
-# Add trusted CAs for communicating with external services
-RUN apk update && apk add --no-cache ca-certificates tzdata && update-ca-certificates
 
 # Set the commit through a build arg
 ARG PLACE_COMMIT="DEV"
-
-COPY shard.yml /app
-COPY shard.lock /app
-RUN shards install --production
-
-# Add source last for efficient caching
-COPY src /app/src
-
-# Build application
-RUN UNAME_AT_COMPILE_TIME=true \
-    PLACE_COMMIT=$PLACE_COMMIT \
-    crystal build /app/src/app.cr -o /app/source
-
-# Extract dependencies
-RUN ldd /app/source | tr -s '[:blank:]' '\n' | grep '^/' | \
-    xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
 
 # Create a non-privileged user, defaults are appuser:10001
 ARG IMAGE_UID="10001"
@@ -37,6 +18,26 @@ RUN adduser \
     --no-create-home \
     --uid "${UID}" \
     "${USER}"
+
+# Add trusted CAs for communicating with external services
+RUN apk update && apk add --no-cache ca-certificates tzdata && update-ca-certificates
+
+COPY shard.yml .
+COPY shard.override.yml .
+COPY shard.lock .
+RUN shards install --production --release
+
+# Add source last for efficient caching
+COPY src /app/src
+
+# Build application
+RUN UNAME_AT_COMPILE_TIME=true \
+    PLACE_COMMIT=$PLACE_COMMIT \
+    crystal build --error-trace --release /app/src/app.cr -o /app/source
+
+# Extract dependencies
+RUN ldd /app/source | tr -s '[:blank:]' '\n' | grep '^/' | \
+    xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
 
 # Build a minimal docker image
 FROM scratch

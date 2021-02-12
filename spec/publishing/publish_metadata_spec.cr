@@ -14,14 +14,19 @@ module PlaceOS::Source
 
     getter messages : Array(Publisher::Message) = [] of Publisher::Message
 
-    def broadcast(message)
+    def broadcast(message : Publisher::Message)
       messages << message
     end
   end
 
   class Dummy
     include PublishMetadata(MockModel)
-    getter publisher_managers : Array(PlaceOS::Source::MockManager) = [PlaceOS::Source::MockManager.new]
+
+    @publisher_managers : Array(PlaceOS::Source::MockManager) = [PlaceOS::Source::MockManager.new]
+
+    def publisher_managers : Array(PlaceOS::Source::PublisherManager)
+      @publisher_managers.map &.as(PlaceOS::Source::PublisherManager)
+    end
   end
 
   describe PublishMetadata do
@@ -34,7 +39,7 @@ module PlaceOS::Source
 
       Fiber.yield
 
-      router.publisher_managers.first.messages.should be_empty
+      router.@publisher_managers.first.messages.should be_empty
     end
 
     it "publishes metadata event if model has a top-level zone" do
@@ -49,7 +54,7 @@ module PlaceOS::Source
 
       Fiber.yield
 
-      message = router.publisher_managers.first.messages.first?
+      message = router.@publisher_managers.first.messages.first?
       message.should_not be_nil
       message = message.not_nil!
       message.data.should eq Mappings::Metadata.new("hello", "org")

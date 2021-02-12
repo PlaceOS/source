@@ -1,0 +1,62 @@
+version: "3.7"
+
+# YAML Anchors
+
+x-deployment-env: &deployment-env
+  ENV: ${ENV:-development}
+  SG_ENV: ${SG_ENV:-development}
+  TZ: $TZ
+
+x-mqtt-client-env: &mqtt-client-env
+  MQTT_HOST: ${MQTT_HOST:-mqtt}
+  MQTT_PORT: ${MQTT_PORT:-1883}
+
+x-redis-client-env: &redis-client-env
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+
+x-rethinkdb-client-env: &rethinkdb-client-env
+  RETHINKDB_HOST: ${RETHINKDB_HOST:-rethink}
+  RETHINKDB_PORT: ${RETHINKDB_PORT:-28015}
+  RETHINKDB_DB: ${RETHINKDB_DB:-place_development}
+
+services:
+  source:
+    build:
+      context: ./
+      dockerfile: Dockerfile.test
+    hostname: source
+    volumes:
+      - ./spec:/app/spec
+      - ./src:/app/src
+    depends_on:
+      - mqtt
+      - redis
+      - rethink
+    environment:
+      # Service Hosts
+      << : *mqtt-client-env
+      << : *redis-client-env
+      << : *rethinkdb-client-env
+      # Environment
+      << : *deployment-env
+
+  mqtt:
+    image: eclipse-mosquitto
+    restart: always
+    hostname: mqtt
+    environment:
+      TZ: $TZ
+
+  redis:
+    image: eqalpha/keydb
+    restart: always
+    hostname: redis
+    environment:
+      TZ: $TZ
+
+  rethink:
+    image: rethinkdb:${RETHINKDB_VERSION:-2.4}
+    restart: always
+    hostname: rethink
+    environment:
+      TZ: $TZ
