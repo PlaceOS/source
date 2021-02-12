@@ -8,6 +8,14 @@ def expected_payload(value)
   %({"time":0,"value":#{value.to_json}})
 end
 
+def test_broker
+  PlaceOS::Model::Broker.new(
+    name: "mosquitto",
+    host: ENV["MQTT_HOST"]?.presence || "localhost",
+    port: ENV["MQTT_PORT"]?.presence.try &.to_i? || 1883,
+  )
+end
+
 module PlaceOS::Source
   abstract class Publisher
     # Mock the timestamp
@@ -21,7 +29,7 @@ module PlaceOS::Source
 
     getter messages : Array(Publisher::Message) = [] of Publisher::Message
 
-    def broadcast(message)
+    def broadcast(message : Publisher::Message)
       messages << message
     end
 

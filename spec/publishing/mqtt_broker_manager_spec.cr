@@ -3,11 +3,7 @@ require "../spec_helper"
 module PlaceOS::Source
   describe MqttBrokerManager do
     it "creates MQTT publishing clients" do
-      model = Model::Broker.new(
-        name: "mosquitto",
-        host: "localhost",
-        port: 1883,
-      )
+      model = test_broker
       id = "broker-acabsns"
       model.id = id
 
