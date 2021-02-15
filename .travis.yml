@@ -1,23 +1,8 @@
-dist: xenial
-language: crystal
+language: minimal
+
 services:
   - docker
 
-env:
-  - SG_ENV=production
-
-before_install:
-  - docker run --net="host" -p "1883:1883" -p "9001:9001" -d eclipse-mosquitto
-  - docker run --net="host" -p "6379:6379" -d eqalpha/keydb
-  - docker run --net="host" -p "29015:29015" -p "28015:28015" -d rethinkdb:2.4
-
-install:
-  - shards install
-
 script:
-  # Specs
-  - crystal spec --error-trace -v
-  # Linter
-  - bin/ameba
-  # Formatter
-  - crystal tool format --check
+  - ./test
+  - ./test --multithreaded || echo "multithreaded suite failed"
