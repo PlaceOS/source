@@ -1,11 +1,21 @@
 version: "3.7"
 
+volumes:
+  influx-data:
+
 # YAML Anchors
 
 x-deployment-env: &deployment-env
   ENV: ${ENV:-development}
   SG_ENV: ${SG_ENV:-development}
   TZ: $TZ
+
+x-influxdb-api-key: &influxdb-api-key .env.influxdb
+
+x-influxdb-client-env: &influxdb-client-env
+  INFLUX_BUCKET: ${INFLUX_BUCKET:-place}
+  INFLUX_HOST: ${INFLUX_HOST:-influxdb}
+  INFLUX_ORG: ${INFLUX_ORG:-PlaceOS}
 
 x-mqtt-client-env: &mqtt-client-env
   MQTT_HOST: ${MQTT_HOST:-mqtt}
@@ -20,11 +30,10 @@ x-rethinkdb-client-env: &rethinkdb-client-env
   RETHINKDB_DB: ${RETHINKDB_DB:-place_development}
 
 services:
-  source:
+  test:
     build:
       context: ./
       dockerfile: Dockerfile.test
-    hostname: source
     volumes:
       - ./spec:/app/spec
       - ./src:/app/src
@@ -32,13 +41,29 @@ services:
       - mqtt
       - redis
       - rethink
+      - influxdb
+    env_file:
+      - *influxdb-api-key
     environment:
       # Service Hosts
+      << : *influxdb-client-env
       << : *mqtt-client-env
       << : *redis-client-env
       << : *rethinkdb-client-env
       # Environment
       << : *deployment-env
+
+  influxdb:
+    image: quay.io/influxdb/influxdb:${INFLUXDB_IMAGE_TAG:-2.0.0-beta}
+    restart: always
+    hostname: influx
+    healthcheck:
+      test: influx bucket list
+    volumes:
+      - type: volume
+        source: influx-data
+        target: /root/.influxdbv2
+    command: "--reporting-disabled"
 
   mqtt:
     image: eclipse-mosquitto
