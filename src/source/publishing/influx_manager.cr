@@ -14,6 +14,8 @@ module PlaceOS::Source
     private getter influx_org : String
     private getter influx_bucket : String
 
+    delegate start, stop, to: publisher
+
     def initialize(
       @influx_host : String = INFLUX_HOST || abort("INFLUX_HOST unset"),
       @influx_api_key : String = INFLUX_API_KEY || abort("INFLUX_API_KEY unset"),
@@ -26,12 +28,6 @@ module PlaceOS::Source
 
     def broadcast(message : Publisher::Message)
       publisher.message_queue.send(message)
-    end
-
-    def start
-    end
-
-    def stop
     end
   end
 end

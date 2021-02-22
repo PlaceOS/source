@@ -43,13 +43,13 @@ module PlaceOS::Source
     # Write an MQTT event to InfluxDB
     #
     def publish(message : Publisher::Message)
-      points = InfluxManager.transform(message)
+      points = self.class.transform(message)
       points.each do |point|
         Log.debug { {
           measurement: point.measurement,
-          timestamp:   point.timestamp,
-          tags:        point.tags,
-          fields:      point.fields,
+          timestamp:   point.timestamp.to_s,
+          tags:        point.tags.to_json,
+          fields:      point.fields.to_json,
         } }
         client.write(bucket, point)
       end
@@ -59,6 +59,7 @@ module PlaceOS::Source
     #
     def self.transform(message : Publisher::Message, timestamp : Time = Publisher.timestamp) : Array(Flux::Point)
       data = message.data
+
       # Only Module status events are persisted
       return [] of Flux::Point unless data.is_a? Mappings::Status
 
@@ -78,7 +79,7 @@ module PlaceOS::Source
       fields["pos_key"] = key
 
       # Influx doesn't support nil values
-      if !payload
+      if payload.nil?
         Log.info { {message: "Influx doesn't support nil values", status: key} }
         return [] of Flux::Point
       end

@@ -39,7 +39,7 @@ module PlaceOS::Source::Router
         end
       end
 
-      Resource::Result::Error
+      Resource::Result::Success
     end
   end
 end

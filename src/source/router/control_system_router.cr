@@ -126,11 +126,11 @@ module PlaceOS::Source::Router
       # NOTE: Duplication decessary due to compiler bug with iteration
       grouped = if !modules.nil?
                   modules.each_with_object(Hash(String, Array(String)).new { |h, k| h[k] = [] of String }) { |mod, mapping|
-                    mapping[mod.resolved_name.as(String)] << mod.id.as(String)
+                    mapping[mod.resolved_name] << mod.id.as(String)
                   }
                 else
                   _system_modules(control_system).each_with_object(Hash(String, Array(String)).new { |h, k| h[k] = [] of String }) { |mod, mapping|
-                    mapping[mod.resolved_name.as(String)] << mod.id.as(String)
+                    mapping[mod.resolved_name] << mod.id.as(String)
                   }
                 end
 
