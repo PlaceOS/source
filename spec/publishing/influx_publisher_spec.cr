@@ -41,11 +41,11 @@ module PlaceOS::Source
         point.tags.should eq({
           "pos_org"      => "org-donor",
           "pos_building" => "cards",
+          "pos_level"    => "nek",
+          "pos_area"     => "2042",
         })
 
         point.fields.should eq({
-          "pos_level"  => "nek",
-          "pos_area"   => "2042",
           "pos_system" => "cs-9445",
           "pos_driver" => "12345",
           "pos_index"  => 1,
@@ -87,11 +87,11 @@ module PlaceOS::Source
         point.tags.should eq({
           "pos_org"      => "org-donor",
           "pos_building" => "cards",
+          "pos_level"    => "nek",
+          "pos_area"     => "2042",
         })
 
         point.fields.should eq({
-          "pos_level"  => "nek",
-          "pos_area"   => "2042",
           "pos_system" => "cs-9445",
           "pos_driver" => "12345",
           "pos_index"  => 1,
@@ -169,13 +169,14 @@ module PlaceOS::Source
         point.tags.should eq({
           "pos_org"      => "org-donor",
           "pos_building" => "pack",
-          "s2_cell_id"   => "12345",
+          "pos_level"    => "nek",
+          "pos_area"     => "2042",
           "pos_uniq"     => "0",
+          "s2_cell_id"   => "12345",
         })
 
         point.fields.should eq({
           "pos_level"         => "not-nek",
-          "pos_area"          => "2042",
           "pos_system"        => "cs-9445",
           "pos_driver"        => "12345",
           "pos_index"         => 1,
@@ -208,12 +209,13 @@ module PlaceOS::Source
         point.tags.should eq({
           "pos_org"      => "org-donor",
           "pos_building" => "pack",
+          "pos_level"    => "nek",
+          "pos_area"     => "2042",
           "pos_uniq"     => "1",
         })
 
         point.fields.should eq({
           "pos_level"   => "not-nek",
-          "pos_area"    => "2042",
           "pos_system"  => "cs-9445",
           "pos_driver"  => "12345",
           "pos_index"   => 1,
