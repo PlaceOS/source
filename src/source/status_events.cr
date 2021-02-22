@@ -9,7 +9,7 @@ module PlaceOS::Source
   class StatusEvents
     Log = ::Log.for(self)
 
-    STATUS_CHANNEL_PATTERN = "status/*"
+    STATUS_CHANNEL_PATTERN = "status/#{Model::Module.table_name}-*"
 
     getter redis : Redis
     private getter mappings : Mappings

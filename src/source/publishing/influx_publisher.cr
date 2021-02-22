@@ -68,10 +68,10 @@ module PlaceOS::Source
       end
 
       # Namespace tags and fields to reduce likely hood that they clash with status names
-      tags = Hash(String, String?){
-        "pos_org"      => data.zone_mapping["org"],
-        "pos_building" => data.zone_mapping["building"],
-      }.compact
+      tags = HIERARCHY.each_with_object({} of String => String) do |key, obj|
+        obj["pos_#{key}"] = data.zone_mapping[key]? || "_"
+      end
+
       fields = ::Flux::Point::FieldSet.new
 
       # https://docs.influxdata.com/influxdb/v2.0/reference/flux/language/lexical-elements/#identifiers
@@ -110,8 +110,6 @@ module PlaceOS::Source
         measurement: data.module_name,
         timestamp: timestamp,
         tags: tags,
-        pos_level: data.zone_mapping["level"],
-        pos_area: data.zone_mapping["area"],
         pos_system: data.control_system_id,
         pos_driver: data.driver_id,
         pos_index: data.index.to_i64,
@@ -164,8 +162,6 @@ module PlaceOS::Source
           measurement: data.module_name,
           timestamp: timestamp,
           tags: local_tags,
-          pos_level: data.zone_mapping["level"],
-          pos_area: data.zone_mapping["area"],
           pos_system: data.control_system_id,
           pos_driver: data.driver_id,
           pos_index: data.index.to_i64,
