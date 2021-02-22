@@ -14,8 +14,14 @@ function trap_ctrlc ()
 # when signal 2 (SIGINT) is received
 trap "trap_ctrlc" 2
 
+./scripts/generate-secrets
+
+docker-compose up --no-deps --detach influxdb
+
+./scripts/init-influxdb
+
 docker-compose build
 
-docker-compose run --rm source /app/scripts/entrypoint.sh "$@"
+docker-compose run --rm test /app/scripts/entrypoint.sh "$@"
 
 docker-compose down
