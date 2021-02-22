@@ -86,7 +86,7 @@ module PlaceOS::Source
       case model
       in Model::ControlSystem
         Model::Zone
-          .find_all(model.zones.as(Array(String)))
+          .find_all(model.zones)
           .reject { |zone| hierarchy_tag?(zone).nil? }
           .to_a
       in Model::Driver
@@ -114,7 +114,7 @@ module PlaceOS::Source
     # Calculate the hiearchy tag for a Zone
     #
     def self.hierarchy_tag?(zone : Model::Zone) : String?
-      hierarchy_tags = zone.tags.as(Set(String)) & hierarchy_set
+      hierarchy_tags = zone.tags & hierarchy_set
 
       if hierarchy_tags.size > 1
         Log.error { "Zone<#{zone.id}> has more than one hierarchy tag: #{hierarchy_tags}" }

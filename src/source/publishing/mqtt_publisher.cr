@@ -57,7 +57,7 @@ module PlaceOS::Source
               nil
             end
 
-      transport = ::MQTT::Transport::TCP.new(broker.host.as(String), broker.port.as(Int32), tls)
+      transport = ::MQTT::Transport::TCP.new(broker.host, broker.port, tls)
 
       # Establish a MQTT connection
       client = ::MQTT::V3::Client.new(transport)
