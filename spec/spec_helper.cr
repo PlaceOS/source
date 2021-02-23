@@ -1,8 +1,13 @@
 require "spec"
 require "placeos-models/spec/generator"
+require "placeos-log-backend"
 
 require "../src/placeos-source"
 require "../src/source/*"
+
+Spec.before_suite do
+  ::Log.setup "*", :debug, PlaceOS::LogBackend.log_backend
+end
 
 def expected_payload(value)
   %({"time":0,"value":#{value.to_json}})

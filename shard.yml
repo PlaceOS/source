@@ -16,6 +16,9 @@ dependencies:
   mqtt:
     github: spider-gazelle/crystal-mqtt
 
+  placeos-log-backend:
+    github: placeos/log-backend
+
   placeos-models:
     github: placeos/models
     version: ~> 4

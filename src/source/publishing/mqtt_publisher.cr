@@ -9,6 +9,8 @@ require "./publisher"
 module PlaceOS::Source
   # Publish to registered MQTT Brokers
   class MqttPublisher < Publisher
+    Log = ::Log.for(self)
+
     private struct Event
       include JSON::Serializable
 
@@ -48,6 +50,8 @@ module PlaceOS::Source
 
     # Create an authenticated MQTT client off metadata in the Broker
     def self.client(broker : PlaceOS::Model::Broker)
+      Log.debug { {message: "creating MQTT client", host: broker.host, port: broker.port.to_s, tls: broker.tls} }
+
       # Create a transport (TCP, UDP, Websocket etc)
       tls = if broker.tls
               tls_client = OpenSSL::SSL::Context::Client.new
@@ -57,7 +61,11 @@ module PlaceOS::Source
               nil
             end
 
-      transport = ::MQTT::Transport::TCP.new(broker.host, broker.port, tls)
+      transport = ::MQTT::Transport::TCP.new(
+        host: broker.host,
+        port: broker.port,
+        tls_context: tls
+      )
 
       # Establish a MQTT connection
       client = ::MQTT::V3::Client.new(transport)
