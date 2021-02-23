@@ -1,5 +1,6 @@
 # Application dependencies
 require "action-controller"
+require "placeos-log-backend"
 
 # Application code
 require "./placeos-source"
@@ -28,7 +29,8 @@ Signal::USR1.trap &logging
 Signal::USR2.trap &logging
 
 # Logging configuration
-log_level = PlaceOS::Source.production? ? Log::Severity::Info : Log::Severity::Debug
-::Log.setup "*", log_level, PlaceOS::Source::LOG_BACKEND
+log_backend = PlaceOS::LogBackend.log_backend
+
+::Log.setup "*", :warn, log_backend
 ::Log.builder.bind "place_os.#{PlaceOS::Source::APP_NAME}.*", log_level, PlaceOS::Source::LOG_BACKEND
-::Log.builder.bind "action-controller.*", log_level, PlaceOS::Source::LOG_BACKEND
+::Log.builder.bind "action-controller.*", log_level, log_backend
