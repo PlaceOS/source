@@ -42,6 +42,7 @@ services:
       - redis
       - rethink
       - influxdb
+    hostname: test
     env_file:
       - *influxdb-api-key
     environment:
@@ -67,6 +68,8 @@ services:
 
   mqtt:
     image: eclipse-mosquitto
+    volumes:
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf
     restart: always
     hostname: mqtt
     environment:

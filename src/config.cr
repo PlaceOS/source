@@ -29,6 +29,7 @@ Signal::USR1.trap &logging
 Signal::USR2.trap &logging
 
 # Logging configuration
+log_level = PlaceOS::Source.production? ? Log::Severity::Info : Log::Severity::Debug
 log_backend = PlaceOS::LogBackend.log_backend
 
 ::Log.setup "*", :warn, log_backend
