@@ -48,6 +48,14 @@ module PlaceOS::Source
     protected def handle_pevent(pattern : String, channel : String, payload : String)
       module_id, status = StatusEvents.parse_channel(channel)
       events = mappings.status_events?(module_id, status)
+
+      Log.debug { {
+        message: "redis pevent",
+        pattern: pattern,
+        channel: channel,
+        payload: payload,
+      } }
+
       if events
         events.each do |event|
           message = Publisher::Message.new(event, payload)

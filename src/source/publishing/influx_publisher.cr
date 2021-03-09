@@ -102,7 +102,7 @@ module PlaceOS::Source
           return parse_custom(raw, fields, tags, data, timestamp)
         end
       rescue e : JSON::ParseException
-        Log.info { {message: "could not extract InfluxDB value type from status value", status: data.status} }
+        Log.info { {message: "could not extract InfluxDB value type from status value", status: data.status, payload: payload} }
         return [] of Flux::Point
       end
 
