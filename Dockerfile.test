@@ -1,4 +1,4 @@
-FROM crystallang/crystal:0.36.1-alpine
+FROM crystallang/crystal:1.0.0-alpine
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ ARG PLACE_COMMIT="DEV"
 RUN apk add --no-cache libssh2 libssh2-static libssh2-dev iputils
 
 # Add trusted CAs for communicating with external services
-RUN apk update && apk add --no-cache ca-certificates tzdata && update-ca-certificates
+RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
 
 RUN apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing watchexec
 
@@ -19,7 +19,7 @@ COPY shard.yml .
 COPY shard.override.yml .
 COPY shard.lock .
 
-RUN shards install
+RUN shards install --ignore-crystal-version
 
 COPY scripts/* /app/scripts/
 

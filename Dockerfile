@@ -1,4 +1,4 @@
-FROM crystallang/crystal:0.36.1-alpine
+FROM crystallang/crystal:1.0.0-alpine
 WORKDIR /app
 
 # Set the commit through a build arg
@@ -20,12 +20,13 @@ RUN adduser \
     "${USER}"
 
 # Add trusted CAs for communicating with external services
-RUN apk update && apk add --no-cache ca-certificates tzdata && update-ca-certificates
+RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
 
 COPY shard.yml .
 COPY shard.override.yml .
 COPY shard.lock .
-RUN shards install --production --release
+
+RUN shards install --production --ignore-crystal-version
 
 # Add source last for efficient caching
 COPY src /app/src
