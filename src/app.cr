@@ -69,7 +69,7 @@ module PlaceOS::Source
   server = ActionController::Server.new(port, host)
 
   terminate = Proc(Signal, Nil).new do |signal|
-    puts " > terminating gracefully"
+    Log.info { "terminating gracefully" }
     spawn { server.close }
     signal.ignore
   end
@@ -82,7 +82,7 @@ module PlaceOS::Source
   # Allow signals to change the log level at run-time
   logging = Proc(Signal, Nil).new do |signal|
     level = signal.usr1? ? Log::Severity::Debug : Log::Severity::Info
-    puts " > Log level changed to #{level}"
+    Log.info { "log level changed to #{level}" }
     Log.builder.bind "*", level, LOG_BACKEND
     signal.ignore
   end
@@ -94,7 +94,7 @@ module PlaceOS::Source
 
   # Start the server
   server.run do
-    puts "Listening on #{server.print_addresses}"
+    Log.info { "listening on #{server.print_addresses}" }
   end
 
   # Shutdown message
