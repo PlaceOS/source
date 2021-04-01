@@ -1,6 +1,7 @@
+require "../src/config"
+
 require "spec"
 require "placeos-models/spec/generator"
-require "placeos-log-backend"
 
 require "../src/placeos-source"
 require "../src/source/*"

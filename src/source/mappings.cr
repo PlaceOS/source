@@ -93,13 +93,13 @@ module PlaceOS::Source
         Model::Module
           .by_driver_id(model.id.as(String))
           .flat_map { |mod| hierarchy_zones(mod) }
-          .uniq
+          .uniq # ameba:disable Performance/ChainedCallWithNoBang
           .to_a
       in Model::Module
         Model::ControlSystem
           .by_module_id(model.id.as(String))
           .flat_map { |cs| hierarchy_zones(cs) }
-          .uniq
+          .uniq # ameba:disable Performance/ChainedCallWithNoBang
           .to_a
       in Model::Zone
         zone = model.parent || model
