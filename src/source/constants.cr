@@ -1,5 +1,4 @@
 require "action-controller"
-require "log_helper"
 require "random"
 
 module PlaceOS::Source
@@ -25,11 +24,7 @@ module PlaceOS::Source
 
   PROD = ENV["ENV"]? == "PROD"
 
-  LOG_BACKEND = ActionController.default_backend
-
-  def self.production?
-    PROD
-  end
+  class_getter? production : Bool = PROD
 
   protected def self.parse_environmental_regex?(string : String?)
     result = string.try do |s|
