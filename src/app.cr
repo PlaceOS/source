@@ -79,19 +79,6 @@ module PlaceOS::Source
   Signal::INT.trap &terminate
   Signal::TERM.trap &terminate
 
-  # Allow signals to change the log level at run-time
-  logging = Proc(Signal, Nil).new do |signal|
-    level = signal.usr1? ? Log::Severity::Debug : Log::Severity::Info
-    Log.info { "log level changed to #{level}" }
-    Log.builder.bind "*", level, LOG_BACKEND
-    signal.ignore
-  end
-
-  # Turn on DEBUG level logging `kill -s USR1 %PID`
-  # Default production log levels (INFO and above) `kill -s USR2 %PID`
-  Signal::USR1.trap &logging
-  Signal::USR2.trap &logging
-
   # Start the server
   server.run do
     Log.info { "listening on #{server.print_addresses}" }

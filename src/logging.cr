@@ -1,22 +1,23 @@
 require "placeos-log-backend"
 
+require "./source/constants"
+
 # Logging configuration
-log_level = PlaceOS::Source.production? ? Log::Severity::Info : Log::Severity::Debug
-log_backend = PlaceOS::LogBackend.log_backend
+module PlaceOS::Source::Logging
+  log_level = Source.production? ? Log::Severity::Info : Log::Severity::Debug
+  log_backend = PlaceOS::LogBackend.log_backend
 
-# Allow signals to change the log level at run-time
-logging = Proc(Signal, Nil).new do |signal|
-  level = signal.usr1? ? Log::Severity::Debug : Log::Severity::Info
-  puts " > Log level changed to #{level}"
-  ::Log.builder.bind "place_os.#{PlaceOS::Source::APP_NAME}.*", level, log_backend
-  signal.ignore
+  namespaces = ["place_os.#{Source::APP_NAME}.*", "action-controller"]
+  ::Log.setup do |config|
+    config.bind "*", :warn, log_backend
+    namespaces.each do |namespace|
+      config.bind namespace, log_level, log_backend
+    end
+  end
+
+  PlaceOS::LogBackend.register_severity_switch_signals(
+    production: Source.production?,
+    namespaces: namespaces,
+    backend: log_backend,
+  )
 end
-
-# Turn on DEBUG level logging `kill -s USR1 %PID`
-# Default production log levels (INFO and above) `kill -s USR2 %PID`
-Signal::USR1.trap &logging
-Signal::USR2.trap &logging
-
-::Log.setup "*", :warn, log_backend
-::Log.builder.bind "place_os.source.*", log_level, log_backend
-::Log.builder.bind "action-controller.*", log_level, log_backend

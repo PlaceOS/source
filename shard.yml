@@ -9,6 +9,7 @@ targets:
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
+    version: ~> 4.4
 
   flux:
     github: place-labs/flux
