@@ -3,6 +3,7 @@ WORKDIR /app
 
 # Set the commit through a build arg
 ARG PLACE_COMMIT="DEV"
+ARG PLACE_VERSION="DEV"
 
 # Create a non-privileged user, defaults are appuser:10001
 ARG IMAGE_UID="10001"
@@ -20,7 +21,8 @@ RUN adduser \
     "${USER}"
 
 # Add trusted CAs for communicating with external services
-RUN apk add --no-cache ca-certificates tzdata && update-ca-certificates
+RUN apk add --no-cache ca-certificates
+RUN update-ca-certificates
 
 COPY shard.yml .
 COPY shard.override.yml .
@@ -34,6 +36,7 @@ COPY src /app/src
 # Build application
 RUN UNAME_AT_COMPILE_TIME=true \
     PLACE_COMMIT=$PLACE_COMMIT \
+    PLACE_VERSION=$PLACE_VERSION \
     crystal build --error-trace --release /app/src/app.cr -o /app/source
 
 # Extract dependencies
