@@ -22,6 +22,10 @@ docker-compose up --no-deps --detach influxdb
 
 docker-compose build
 
-docker-compose run --rm test /app/scripts/entrypoint.sh "$@"
+exit_code="0"
+
+docker-compose run --rm test /app/scripts/entrypoint.sh "$@" || exit_code="$?"
 
 docker-compose down
+
+exit ${exit_code}

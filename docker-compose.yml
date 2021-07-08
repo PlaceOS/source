@@ -46,6 +46,8 @@ services:
     env_file:
       - *influxdb-api-key
     environment:
+      # Environment
+      GITHUB_ACTION: ${GITHUB_ACTION:-}
       # Service Hosts
       << : *influxdb-client-env
       << : *mqtt-client-env
