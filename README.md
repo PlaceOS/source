@@ -1,8 +1,9 @@
 # PlaceOS State Source Service
 
-[![Build Status](https://travis-ci.com/PlaceOS/source.svg?token=tDypQH5g9ptvYso68jVV&branch=master)](https://travis-ci.com/PlaceOS/source)
+[![Build Dev Image](https://github.com/PlaceOS/source/actions/workflows/build-dev-image.yml/badge.svg)](https://github.com/PlaceOS/source/actions/workflows/build-dev-image.yml)
+[![CI](https://github.com/PlaceOS/source/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/source/actions/workflows/ci.yml)
 
-Service that publishes module state.
+Service that publishes PlaceOS module state.
 
 Currently MQTT and InfluxDB are supported backends.
 
