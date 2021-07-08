@@ -10,7 +10,7 @@ module PlaceOS::Source
       zone.id = "zone-abcde1232"
 
       router = Router::Zone.new(Mappings.new, [] of PublisherManager)
-      router.@event_channel.send({action: Resource::Action::Created, resource: zone})
+      router.@event_channel.send(Resource::Event.new(:created, zone))
       router.start
 
       sleep 0.01

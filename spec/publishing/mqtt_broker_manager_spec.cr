@@ -7,13 +7,13 @@ module PlaceOS::Source
       id = "broker-acabsns"
       model.id = id
 
-      event = {action: Resource::Action::Created, resource: model}
+      event = Resource::Event.new(:created, model)
       publisher_manager = MqttBrokerManager.new
       publisher_manager.@event_channel.send(event)
       publisher_manager.start
 
       # Yield to the PublisherManager
-      while publisher_manager.processed.size != 1
+      while publisher_manager.processed.empty?
         Fiber.yield
       end
 
