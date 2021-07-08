@@ -6,6 +6,9 @@ module PlaceOS::Source
   APP_NAME    = "source"
   VERSION     = {{ `shards version "#{__DIR__}"`.chomp.stringify.downcase }}
 
+  BUILD_TIME   = {{ system("date -u").chomp.stringify }}
+  BUILD_COMMIT = {{ env("PLACE_COMMIT") || "DEV" }}
+
   INFLUX_HOST    = ENV["INFLUX_HOST"]?
   INFLUX_API_KEY = ENV["INFLUX_API_KEY"]?
   INFLUX_ORG     = ENV["INFLUX_ORG"]? || "placeos"
