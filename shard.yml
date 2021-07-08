@@ -24,7 +24,7 @@ dependencies:
 
   placeos-models:
     github: placeos/models
-    version: ~> 4
+    version: ">= 5.0.0"
 
   placeos-resource:
     github: place-labs/resource
