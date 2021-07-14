@@ -25,7 +25,6 @@ RUN apk add --no-cache ca-certificates
 RUN update-ca-certificates
 
 COPY shard.yml .
-COPY shard.override.yml .
 COPY shard.lock .
 
 RUN shards install --production --ignore-crystal-version
