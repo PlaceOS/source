@@ -203,7 +203,7 @@ module PlaceOS::Source
     def write
       mappings_lock.write do
         v = yield @state
-        Log.debug { {
+        Log.trace { {
           message:  "wrote mappings",
           mappings: @state.to_json,
         } }

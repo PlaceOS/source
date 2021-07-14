@@ -49,11 +49,10 @@ module PlaceOS::Source
       module_id, status = StatusEvents.parse_channel(channel)
       events = mappings.status_events?(module_id, status)
 
-      Log.debug { {
+      Log.trace { {
         message: "redis pevent",
         pattern: pattern,
         channel: channel,
-        payload: payload,
       } }
 
       if events
