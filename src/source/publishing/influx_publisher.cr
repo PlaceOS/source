@@ -80,7 +80,7 @@ module PlaceOS::Source
 
       # Influx doesn't support nil values
       if payload.nil?
-        Log.info { {message: "Influx doesn't support nil values", status: key} }
+        Log.debug { {message: "Influx doesn't support nil values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         return [] of Flux::Point
       end
 
@@ -102,7 +102,7 @@ module PlaceOS::Source
           return parse_custom(raw, fields, tags, data, timestamp)
         end
       rescue e : JSON::ParseException
-        Log.info { {message: "could not extract InfluxDB value type from status value", status: data.status, payload: payload} }
+        Log.info { {message: "not an InfluxDB value type", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         return [] of Flux::Point
       end
 
