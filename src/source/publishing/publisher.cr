@@ -27,7 +27,11 @@ module PlaceOS::Source
     private def consume_messages
       spawn do
         while message = message_queue.receive?
-          publish(message)
+          begin
+            publish(message)
+          rescue error
+            Log.warn(exception: error) { "publishing message: #{message}" }
+          end
         end
       end
     end
