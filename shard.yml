@@ -24,7 +24,7 @@ dependencies:
 
   placeos-models:
     github: placeos/models
-    version: ">= 5.0.0"
+    version: ~> 5.9
 
   placeos-resource:
     github: place-labs/resource
@@ -36,7 +36,7 @@ dependencies:
 
   rethinkdb-orm:
     github: spider-gazelle/rethinkdb-orm
-    version: ~> 4
+    version: ">= 4.0.0"
 
   rwlock:
     github: spider-gazelle/readers-writer
