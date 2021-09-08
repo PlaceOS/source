@@ -71,6 +71,8 @@ module PlaceOS::Source
       tags = HIERARCHY.each_with_object({} of String => String) do |key, obj|
         obj["pos_#{key}"] = data.zone_mapping[key]? || "_"
       end
+      tags["pos_system"] = data.control_system_id
+      tags["pos_index"] = data.index.to_i64.to_s
 
       fields = ::Flux::Point::FieldSet.new
 
@@ -110,9 +112,7 @@ module PlaceOS::Source
         measurement: data.module_name,
         timestamp: timestamp,
         tags: tags,
-        pos_system: data.control_system_id,
         pos_driver: data.driver_id,
-        pos_index: data.index.to_i64,
       )
       point.fields.merge!(fields)
       [point]
@@ -162,9 +162,7 @@ module PlaceOS::Source
           measurement: data.module_name,
           timestamp: timestamp,
           tags: local_tags,
-          pos_system: data.control_system_id,
           pos_driver: data.driver_id,
-          pos_index: data.index.to_i64,
         )
         point.fields.merge!(local_fields)
         points << point
