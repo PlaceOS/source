@@ -1,4 +1,5 @@
-FROM crystallang/crystal:1.0.0-alpine
+ARG CRYSTAL_VERSION=1.1.1
+FROM crystallang/crystal:${CRYSTAL_VERSION}-alpine as build
 WORKDIR /app
 
 # Set the commit through a build arg
@@ -21,8 +22,7 @@ RUN adduser \
     "${USER}"
 
 # Add trusted CAs for communicating with external services
-RUN apk add --no-cache ca-certificates
-RUN update-ca-certificates
+RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 COPY shard.yml .
 COPY shard.lock .
@@ -46,22 +46,22 @@ RUN ldd /app/source | tr -s '[:blank:]' '\n' | grep '^/' | \
 FROM scratch
 WORKDIR /
 ENV PATH=$PATH:/
-COPY --from=0 /app/deps /
-COPY --from=0 /app/source /source
+COPY --from=build /app/deps /
+COPY --from=build /app/source /source
 
 # These are required for communicating with external services
-COPY --from=0 /etc/hosts /etc/hosts
+COPY --from=build /etc/hosts /etc/hosts
 
 # These provide certificate chain validation where communicating with external services over TLS
-COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # This is required for Timezone support
-COPY --from=0 /usr/share/zoneinfo/ /usr/share/zoneinfo/
+COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 
 # Copy the user information over
-COPY --from=0 /etc/passwd /etc/passwd
-COPY --from=0 /etc/group /etc/group
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/group /etc/group
 
 # Use an unprivileged user.
 USER appuser:appuser
