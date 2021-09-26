@@ -68,7 +68,7 @@ module PlaceOS::Source
       end
 
       # Namespace tags and fields to reduce likely hood that they clash with status names
-      tags = HIERARCHY.each_with_object({} of String => String) do |key, obj|
+      tags = HIERARCHY.each_with_object(Hash(String, String).new(initial_capacity: HIERARCHY.size)) do |key, obj|
         obj["pos_#{key}"] = data.zone_mapping[key]? || "_"
       end
       tags["pos_system"] = data.control_system_id
