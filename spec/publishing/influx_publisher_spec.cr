@@ -43,12 +43,12 @@ module PlaceOS::Source
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_index"    => "1",
         })
 
         point.fields.should eq({
-          "pos_system" => "cs-9445",
           "pos_driver" => "12345",
-          "pos_index"  => 1,
           "power"      => false,
           "pos_key"    => "power",
         })
@@ -89,12 +89,12 @@ module PlaceOS::Source
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_index"    => "1",
         })
 
         point.fields.should eq({
-          "pos_system" => "cs-9445",
           "pos_driver" => "12345",
-          "pos_index"  => 1,
           "pos_key"    => "state",
           "hello"      => "world",
           "temp"       => 30.5,
@@ -171,15 +171,15 @@ module PlaceOS::Source
           "pos_building" => "pack",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_index"    => "1",
           "pos_uniq"     => "0",
           "s2_cell_id"   => "12345",
         })
 
         point.fields.should eq({
           "pos_level"         => "not-nek",
-          "pos_system"        => "cs-9445",
           "pos_driver"        => "12345",
-          "pos_index"         => 1,
           "pos_key"           => "state",
           "location"          => "wireless",
           "coordinates_from"  => "bottom-left",
@@ -211,14 +211,14 @@ module PlaceOS::Source
           "pos_building" => "pack",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_index"    => "1",
           "pos_uniq"     => "1",
         })
 
         point.fields.should eq({
           "pos_level"   => "not-nek",
-          "pos_system"  => "cs-9445",
           "pos_driver"  => "12345",
-          "pos_index"   => 1,
           "pos_key"     => "state",
           "location"    => "desk",
           "at_location" => false,

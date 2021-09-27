@@ -68,9 +68,11 @@ module PlaceOS::Source
       end
 
       # Namespace tags and fields to reduce likely hood that they clash with status names
-      tags = HIERARCHY.each_with_object({} of String => String) do |key, obj|
+      tags = HIERARCHY.each_with_object(Hash(String, String).new(initial_capacity: HIERARCHY.size + 2)) do |key, obj|
         obj["pos_#{key}"] = data.zone_mapping[key]? || "_"
       end
+      tags["pos_system"] = data.control_system_id
+      tags["pos_index"] = data.index.to_i64.to_s
 
       fields = ::Flux::Point::FieldSet.new
 
@@ -106,13 +108,14 @@ module PlaceOS::Source
         return [] of Flux::Point
       end
 
+      fields.delete("pos_system")
+      fields.delete("pos_index")
+
       point = Flux::Point.new!(
         measurement: data.module_name,
         timestamp: timestamp,
         tags: tags,
-        pos_system: data.control_system_id,
         pos_driver: data.driver_id,
-        pos_index: data.index.to_i64,
       )
       point.fields.merge!(fields)
       [point]
@@ -162,9 +165,7 @@ module PlaceOS::Source
           measurement: data.module_name,
           timestamp: timestamp,
           tags: local_tags,
-          pos_system: data.control_system_id,
           pos_driver: data.driver_id,
-          pos_index: data.index.to_i64,
         )
         point.fields.merge!(local_fields)
         points << point
