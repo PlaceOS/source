@@ -211,14 +211,14 @@ module PlaceOS::Source
           "pos_building" => "pack",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_index"    => "1",
           "pos_uniq"     => "1",
         })
 
         point.fields.should eq({
           "pos_level"   => "not-nek",
-          "pos_system"  => "cs-9445",
           "pos_driver"  => "12345",
-          "pos_index"   => 1,
           "pos_key"     => "state",
           "location"    => "desk",
           "at_location" => false,
