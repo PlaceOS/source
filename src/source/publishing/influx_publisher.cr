@@ -68,7 +68,7 @@ module PlaceOS::Source
       end
 
       # Namespace tags and fields to reduce likely hood that they clash with status names
-      tags = HIERARCHY.each_with_object(Hash(String, String).new(initial_capacity: HIERARCHY.size)) do |key, obj|
+      tags = HIERARCHY.each_with_object(Hash(String, String).new(initial_capacity: HIERARCHY.size + 2)) do |key, obj|
         obj["pos_#{key}"] = data.zone_mapping[key]? || "_"
       end
       tags["pos_system"] = data.control_system_id
@@ -107,6 +107,9 @@ module PlaceOS::Source
         Log.info { {message: "not an InfluxDB value type", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         return [] of Flux::Point
       end
+
+      fields.delete("pos_system")
+      fields.delete("pos_index")
 
       point = Flux::Point.new!(
         measurement: data.module_name,
