@@ -86,7 +86,6 @@ module PlaceOS::Source
         return [] of Flux::Point
       end
 
-
       begin
         raw = Value.from_json(payload)
 
