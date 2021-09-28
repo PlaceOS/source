@@ -86,8 +86,6 @@ module PlaceOS::Source
         return [] of Flux::Point
       end
 
-      fields.delete("pos_system")
-      fields.delete("pos_index")
 
       begin
         raw = Value.from_json(payload)
