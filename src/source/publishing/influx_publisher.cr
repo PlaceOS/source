@@ -124,9 +124,7 @@ module PlaceOS::Source
     end
 
     protected def self.parse_hash(raw, fields, tags, data, timestamp)
-      points = [] of Flux::Point
-
-      raw.each do |hash_key, hash|
+      raw.map do |hash_key, hash|
         local_fields = hash.each_with_object(fields.dup) do |(sub_key, value), local|
           unless value.nil?
             sub_key = sub_key.gsub(/\W/, '_')
