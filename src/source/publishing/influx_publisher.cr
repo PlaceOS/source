@@ -35,7 +35,7 @@ module PlaceOS::Source
       property ts_map : Hash(String, String)?
     end
 
-    alias Value = Flux::Point::FieldType | Hash(String, Flux::Point::FieldType?) | CustomMetrics
+    alias Value = Flux::Point::FieldType | Hash(String, Hash(String, Flux::Point::FieldType?)) | Hash(String, Flux::Point::FieldType?) | CustomMetrics
 
     def initialize(@client : Flux::Client, @bucket : String)
     end
@@ -100,6 +100,10 @@ module PlaceOS::Source
             sub_key = sub_key.gsub(/\W/, '_')
             fields[sub_key] = value
           end
+        in Hash(String, Hash(String, Flux::Point::FieldType?))
+          compacted = raw.compact
+          return [] of Flux::Point if compacted.empty?
+          return parse_hash(compacted, fields, tags, data, timestamp)
         in CustomMetrics
           return parse_custom(raw, fields, tags, data, timestamp)
         end
@@ -107,9 +111,6 @@ module PlaceOS::Source
         Log.info { {message: "not an InfluxDB value type", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         return [] of Flux::Point
       end
-
-      fields.delete("pos_system")
-      fields.delete("pos_index")
 
       point = Flux::Point.new!(
         measurement: data.module_name,
@@ -119,6 +120,27 @@ module PlaceOS::Source
       )
       point.fields.merge!(fields)
       [point]
+    end
+
+    protected def self.parse_hash(raw, fields, tags, data, timestamp)
+      raw.map do |hash_key, hash|
+        local_fields = hash.each_with_object(fields.dup) do |(sub_key, value), local|
+          unless value.nil?
+            sub_key = sub_key.gsub(/\W/, '_')
+            local[sub_key] = value
+          end
+        end
+
+        # track the parent key
+        local_fields["parent_hash_key"] = hash_key
+
+        Flux::Point.new!(
+          measurement: data.module_name,
+          timestamp: timestamp,
+          tags: tags,
+          pos_driver: data.driver_id,
+        ).tap &.fields.merge!(local_fields)
+      end
     end
 
     protected def self.parse_custom(raw, fields, tags, data, timestamp)
