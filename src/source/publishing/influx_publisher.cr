@@ -127,11 +127,11 @@ module PlaceOS::Source
       points = [] of Flux::Point
 
       raw.each do |hash_key, hash|
-        local_fields = fields.dup
-
-        hash.compact.each do |sub_key, value|
-          sub_key = sub_key.gsub(/\W/, '_')
-          local_fields[sub_key] = value
+        local_fields = hash.each_with_object(fields.dup) do |(sub_key, value), local|
+          unless value.nil?
+            sub_key = sub_key.gsub(/\W/, '_')
+            local[sub_key] = value
+          end
         end
 
         # track the parent key
