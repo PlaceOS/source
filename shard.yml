@@ -15,6 +15,7 @@ dependencies:
 
   flux:
     github: place-labs/flux
+    version: ~> 3.0
 
   mqtt:
     github: spider-gazelle/crystal-mqtt
