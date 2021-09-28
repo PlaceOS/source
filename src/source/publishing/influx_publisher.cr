@@ -135,17 +135,13 @@ module PlaceOS::Source
         # track the parent key
         local_fields["parent_hash_key"] = hash_key
 
-        point = Flux::Point.new!(
+        Flux::Point.new!(
           measurement: data.module_name,
           timestamp: timestamp,
           tags: tags,
           pos_driver: data.driver_id,
-        )
-        point.fields.merge!(local_fields)
-        points << point
+        ).tap &.fields.merge!(local_fields)
       end
-
-      points
     end
 
     protected def self.parse_custom(raw, fields, tags, data, timestamp)
