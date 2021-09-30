@@ -35,7 +35,7 @@ module PlaceOS::Source
       property ts_map : Hash(String, String)?
     end
 
-    alias Value = Flux::Point::FieldType | Hash(String, Hash(String, Flux::Point::FieldType?)) | Hash(String, Flux::Point::FieldType?) | CustomMetrics
+    alias Value = Flux::Point::FieldType | Hash(String, Flux::Point::FieldType?) | Hash(String, Hash(String, Flux::Point::FieldType?)) | CustomMetrics
 
     def initialize(@client : Flux::Client, @bucket : String)
     end
@@ -63,8 +63,14 @@ module PlaceOS::Source
       # Only Module status events are persisted
       return [] of Flux::Point unless data.is_a? Mappings::Status
 
-      payload = message.payload.try &.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
+      payload = message.payload.presence.try &.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
         hmac_sha256(match_string)
+      end
+
+      # Influx doesn't support `nil` values
+      if payload.nil? || payload == "null"
+        Log.debug { {message: "Influx doesn't support nil values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
+        return [] of Flux::Point
       end
 
       # Namespace tags and fields to reduce likely hood that they clash with status names
@@ -80,67 +86,50 @@ module PlaceOS::Source
       key = data.status.gsub(/\W/, '_')
       fields["pos_key"] = key
 
-      # Influx doesn't support nil values
-      if payload.nil?
-        Log.debug { {message: "Influx doesn't support nil values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
-        return [] of Flux::Point
-      end
-
       begin
-        raw = Value.from_json(payload)
-
-        case raw
+        case raw = Value.from_json(payload)
+        in CustomMetrics then parse_custom(raw, fields, tags, data, timestamp)
         in Flux::Point::FieldType
           fields[key] = raw
-        in Hash(String, Flux::Point::FieldType?)
-          compacted = raw.compact
-          return [] of Flux::Point if compacted.empty?
+          point = Flux::Point.new!(
+            measurement: data.module_name,
+            timestamp: timestamp,
+            tags: tags,
+            pos_driver: data.driver_id,
+          ).tap &.fields.merge!(fields)
 
-          compacted.each do |sub_key, value|
-            sub_key = sub_key.gsub(/\W/, '_')
-            fields[sub_key] = value
-          end
+          [point]
+        in Hash(String, Flux::Point::FieldType?)
+          [parse_hash(raw, nil, fields, tags, data, timestamp)].compact
         in Hash(String, Hash(String, Flux::Point::FieldType?))
-          compacted = raw.compact
-          return [] of Flux::Point if compacted.empty?
-          return parse_hash(compacted, fields, tags, data, timestamp)
-        in CustomMetrics
-          return parse_custom(raw, fields, tags, data, timestamp)
+          raw.compact_map do |hash_key, hash|
+            parse_hash(hash, hash_key, fields, tags, data, timestamp)
+          end
         end
       rescue e : JSON::ParseException
         Log.info { {message: "not an InfluxDB value type", module_id: data.module_id, module_name: data.module_name, status: data.status} }
-        return [] of Flux::Point
+        [] of Flux::Point
+      end
+    end
+
+    protected def self.parse_hash(hash, parent_key, fields, tags, data, timestamp)
+      return if hash.nil? || (hash = hash.compact).empty?
+
+      local_fields = hash.each_with_object(fields.dup) do |(sub_key, value), local|
+        next if value.nil?
+
+        sub_key = sub_key.gsub(/\W/, '_')
+        local[sub_key] = value
       end
 
-      point = Flux::Point.new!(
+      local_fields["parent_hash_key"] = parent_key unless parent_key.nil?
+
+      Flux::Point.new!(
         measurement: data.module_name,
         timestamp: timestamp,
         tags: tags,
         pos_driver: data.driver_id,
-      )
-      point.fields.merge!(fields)
-      [point]
-    end
-
-    protected def self.parse_hash(raw, fields, tags, data, timestamp)
-      raw.map do |hash_key, hash|
-        local_fields = hash.each_with_object(fields.dup) do |(sub_key, value), local|
-          unless value.nil?
-            sub_key = sub_key.gsub(/\W/, '_')
-            local[sub_key] = value
-          end
-        end
-
-        # track the parent key
-        local_fields["parent_hash_key"] = hash_key
-
-        Flux::Point.new!(
-          measurement: data.module_name,
-          timestamp: timestamp,
-          tags: tags,
-          pos_driver: data.driver_id,
-        ).tap &.fields.merge!(local_fields)
-      end
+      ).tap &.fields.merge!(local_fields)
     end
 
     protected def self.parse_custom(raw, fields, tags, data, timestamp)
@@ -148,12 +137,13 @@ module PlaceOS::Source
       if ts_tags = raw.ts_tags
         tags.merge!(ts_tags.compact)
       end
+
       if ts_fields = raw.ts_fields
         fields.merge!(ts_fields.compact)
       end
 
       ts_map = raw.ts_map || {} of String => String
-      points = [] of Flux::Point
+      points = Array(Flux::Point).new(initial_capacity: raw.value.size)
 
       raw.value.each_with_index do |val, index|
         # Skip if an empty point
@@ -167,7 +157,7 @@ module PlaceOS::Source
           local_fields[sub_key] = value
         end
 
-        # must include a `pos_uniq` tag for seperating points
+        # Must include a `pos_uniq` tag for seperating points
         # as per: https://docs.influxdata.com/influxdb/v2.0/write-data/best-practices/duplicate-points/#add-an-arbitrary-tag
         local_tags = tags.dup
         local_tags["pos_uniq"] = index.to_s
@@ -183,14 +173,12 @@ module PlaceOS::Source
           end
         end
 
-        point = Flux::Point.new!(
+        points << Flux::Point.new!(
           measurement: data.module_name,
           timestamp: timestamp,
           tags: local_tags,
           pos_driver: data.driver_id,
-        )
-        point.fields.merge!(local_fields)
-        points << point
+        ).tap &.fields.merge!(local_fields)
       end
 
       points

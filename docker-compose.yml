@@ -59,7 +59,7 @@ services:
       << : *deployment-env
 
   influxdb:
-    image: quay.io/influxdb/influxdb:${INFLUXDB_IMAGE_TAG:-2.0.0-beta}
+    image: influxdb:${INFLUXDB_IMAGE_TAG:-2.0-alpine}
     restart: always
     hostname: influx
     healthcheck:
