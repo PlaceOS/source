@@ -63,8 +63,14 @@ module PlaceOS::Source
       # Only Module status events are persisted
       return [] of Flux::Point unless data.is_a? Mappings::Status
 
-      payload = message.payload.try &.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
+      payload = message.payload.presence.try &.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
         hmac_sha256(match_string)
+      end
+
+      # Influx doesn't support `nil` values
+      if payload.nil? || payload == "null"
+        Log.debug { {message: "Influx doesn't support nil values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
+        return [] of Flux::Point
       end
 
       # Namespace tags and fields to reduce likely hood that they clash with status names
