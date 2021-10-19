@@ -15,6 +15,12 @@ trap "trap_ctrlc" 2
 
 docker-compose pull -q
 
+./scripts/generate-secrets
+
+docker-compose up --no-deps --detach influxdb
+
+./scripts/init-influxdb
+
 docker-compose build -q
 
 exit_code="0"
