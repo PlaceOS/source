@@ -38,6 +38,8 @@ RUN UNAME_AT_COMPILE_TIME=true \
     PLACE_VERSION=$PLACE_VERSION \
     crystal build --error-trace --release /app/src/app.cr -o /app/source
 
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
 # Extract dependencies
 RUN ldd /app/source | tr -s '[:blank:]' '\n' | grep '^/' | \
     xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
