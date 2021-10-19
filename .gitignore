@@ -1,4 +1,5 @@
 *.dwarf
+.htpasswd-kibana
 .DS_Store
 .crystal
 .env.*
