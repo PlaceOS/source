@@ -154,7 +154,6 @@ module PlaceOS::Source
 
       ts_map = raw.ts_map || {} of String => String
       points = Array(Flux::Point).new(initial_capacity: raw.value.size)
-
       default_measurement = raw.measurement
 
       raw.value.each_with_index do |val, index|
@@ -163,42 +162,46 @@ module PlaceOS::Source
         next if compacted.empty?
         measurement = default_measurement || data.module_name
 
-        # Add the fields
-        local_fields = fields.dup
-        compacted.each do |sub_key, value|
-          sub_key = (ts_map[sub_key]? || sub_key).gsub(/\W/, '_')
-          if sub_key == "measurement" && value.is_a?(String)
-            measurement = value
-          else
-            local_fields[sub_key] = value
-          end
-        end
-
         # Must include a `pos_uniq` tag for seperating points
         # as per: https://docs.influxdata.com/influxdb/v2.0/write-data/best-practices/duplicate-points/#add-an-arbitrary-tag
         local_tags = tags.dup
         local_tags["pos_uniq"] = index.to_s
 
-        # convert fields to tags as required
-        if ts_tag_keys = raw.ts_tag_keys
-          ts_tag_keys.each do |field|
-            field_value = local_fields.delete field
-            # might be `false`
-            if !field_value.nil?
-              local_tags[field] = field_value.to_s
-            end
-          end
-        end
-
-        points << Flux::Point.new!(
-          measurement: measurement,
-          timestamp: timestamp,
-          tags: local_tags,
-          pos_driver: data.driver_id,
-        ).tap &.fields.merge!(local_fields)
+        points << build_custom_point(measurement, data, fields, local_tags, compacted, timestamp, ts_map, raw.ts_tag_keys)
       end
 
       points
+    end
+
+    protected def self.build_custom_point(measurement, data, fields, local_tags, compacted, timestamp, ts_map, ts_tag_keys)
+      # Add the fields
+      local_fields = fields.dup
+      compacted.each do |sub_key, value|
+        sub_key = (ts_map[sub_key]? || sub_key).gsub(/\W/, '_')
+        if sub_key == "measurement" && value.is_a?(String)
+          measurement = value
+        else
+          local_fields[sub_key] = value
+        end
+      end
+
+      # convert fields to tags as required
+      if ts_tag_keys
+        ts_tag_keys.each do |field|
+          field_value = local_fields.delete field
+          # might be `false`
+          if !field_value.nil?
+            local_tags[field] = field_value.to_s
+          end
+        end
+      end
+
+      Flux::Point.new!(
+        measurement: measurement,
+        timestamp: timestamp,
+        tags: local_tags,
+        pos_driver: data.driver_id,
+      ).tap &.fields.merge!(local_fields)
     end
 
     protected def self.hmac_sha256(data : String)
