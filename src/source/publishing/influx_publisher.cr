@@ -25,6 +25,9 @@ module PlaceOS::Source
       # Add these tags and fields to all the values
       property ts_tags : Hash(String, String?)?
       property ts_fields : Hash(String, Flux::Point::FieldType?)?
+
+      # Allow custom measurement name to be used for entries
+      property measurement : String?
     end
 
     class ComplexMetric < CustomMetrics
@@ -79,6 +82,7 @@ module PlaceOS::Source
       end
       tags["pos_system"] = data.control_system_id
       tags["pos_index"] = data.index.to_i64.to_s
+      tags["mod_name"] = data.module_name
 
       fields = ::Flux::Point::FieldSet.new
 
@@ -114,18 +118,24 @@ module PlaceOS::Source
 
     protected def self.parse_hash(hash, parent_key, fields, tags, data, timestamp)
       return if hash.nil? || (hash = hash.compact).empty?
+      measurement = data.module_name
 
       local_fields = hash.each_with_object(fields.dup) do |(sub_key, value), local|
         next if value.nil?
 
         sub_key = sub_key.gsub(/\W/, '_')
-        local[sub_key] = value
+
+        if sub_key == "measurement" && value.is_a?(String)
+          measurement = value
+        else
+          local[sub_key] = value
+        end
       end
 
       local_fields["parent_hash_key"] = parent_key unless parent_key.nil?
 
       Flux::Point.new!(
-        measurement: data.module_name,
+        measurement: measurement,
         timestamp: timestamp,
         tags: tags,
         pos_driver: data.driver_id,
@@ -145,16 +155,23 @@ module PlaceOS::Source
       ts_map = raw.ts_map || {} of String => String
       points = Array(Flux::Point).new(initial_capacity: raw.value.size)
 
+      default_measurement = raw.measurement
+
       raw.value.each_with_index do |val, index|
         # Skip if an empty point
         compacted = val.compact
         next if compacted.empty?
+        measurement = default_measurement || data.module_name
 
         # Add the fields
         local_fields = fields.dup
         compacted.each do |sub_key, value|
           sub_key = (ts_map[sub_key]? || sub_key).gsub(/\W/, '_')
-          local_fields[sub_key] = value
+          if sub_key == "measurement" && value.is_a?(String)
+            measurement = value
+          else
+            local_fields[sub_key] = value
+          end
         end
 
         # Must include a `pos_uniq` tag for seperating points
@@ -174,7 +191,7 @@ module PlaceOS::Source
         end
 
         points << Flux::Point.new!(
-          measurement: data.module_name,
+          measurement: measurement,
           timestamp: timestamp,
           tags: local_tags,
           pos_driver: data.driver_id,
