@@ -19,6 +19,7 @@ def test_broker
     name: "mosquitto",
     host: ENV["MQTT_HOST"]?.presence || "localhost",
     port: ENV["MQTT_PORT"]?.presence.try &.to_i? || 1883,
+    auth_type: :no_auth,
   )
 end
 

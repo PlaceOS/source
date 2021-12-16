@@ -31,7 +31,7 @@ x-rethinkdb-client-env: &rethinkdb-client-env
 
 services:
   test:
-    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-1.2.1}
+    image: placeos/service-spec-runner:${CRYSTAL_VERSION:-1.2.2}
     volumes:
       - ${PWD}/coverage:/app/coverage
       - ${PWD}/shard.lock:/app/shard.lock
@@ -70,11 +70,11 @@ services:
     command: "--reporting-disabled"
 
   mqtt:
-    image: eclipse-mosquitto
-    volumes:
-      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-    restart: always
+    image: iegomez/mosquitto-go-auth:${MOSQUITTO_IMAGE_TAG:-latest}
     hostname: mqtt
+    restart: always
+    volumes:
+      - ${PWD}/config/mosquitto.conf:/etc/mosquitto/mosquitto.conf
     environment:
       TZ: $TZ
 

@@ -2,7 +2,7 @@ require "../spec_helper"
 
 module PlaceOS::Source
   describe MqttBrokerManager do
-    pending "creates MQTT publishing clients" do
+    it "creates MQTT publishing clients" do
       model = test_broker
       id = "broker-acabsns"
       model.id = id

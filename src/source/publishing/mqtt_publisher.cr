@@ -69,7 +69,10 @@ module PlaceOS::Source
 
       # Establish a MQTT connection
       client = ::MQTT::V3::Client.new(transport)
-      client.connect
+
+      spawn do
+        client.connect
+      end
 
       client
     end
