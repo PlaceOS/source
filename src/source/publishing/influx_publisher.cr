@@ -81,8 +81,8 @@ module PlaceOS::Source
         obj["pos_#{key}"] = data.zone_mapping[key]? || "_"
       end
       tags["pos_system"] = data.control_system_id
+      tags["pos_module"] = data.module_name
       tags["pos_index"] = data.index.to_i64.to_s
-      tags["mod_name"] = data.module_name
 
       fields = ::Flux::Point::FieldSet.new
 
