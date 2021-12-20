@@ -44,6 +44,7 @@ module PlaceOS::Source
           "pos_level"    => "nek",
           "pos_area"     => "2042",
           "pos_system"   => "cs-9445",
+          "pos_module"   => "M'Odule",
           "pos_index"    => "1",
         })
 
@@ -90,6 +91,7 @@ module PlaceOS::Source
           "pos_level"    => "nek",
           "pos_area"     => "2042",
           "pos_system"   => "cs-9445",
+          "pos_module"   => "M'Odule",
           "pos_index"    => "1",
         })
 
@@ -172,6 +174,7 @@ module PlaceOS::Source
           "pos_level"    => "nek",
           "pos_area"     => "2042",
           "pos_system"   => "cs-9445",
+          "pos_module"   => "M'Odule",
           "pos_index"    => "1",
           "pos_uniq"     => "0",
           "s2_cell_id"   => "12345",
@@ -212,6 +215,7 @@ module PlaceOS::Source
           "pos_level"    => "nek",
           "pos_area"     => "2042",
           "pos_system"   => "cs-9445",
+          "pos_module"   => "M'Odule",
           "pos_index"    => "1",
           "pos_uniq"     => "1",
         })
