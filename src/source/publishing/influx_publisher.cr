@@ -109,15 +109,15 @@ module PlaceOS::Source
           pos_uniq = 0
           raw.compact_map do |hash_key, hash|
             tags["pos_uniq"] = pos_uniq.to_s
-            parse_hash(hash, hash_key, fields, tags, data, timestamp)
             pos_uniq += 1
+            parse_hash(hash, hash_key, fields, tags, data, timestamp)
           end
         in Array(Hash(String, Flux::Point::FieldType?))
           pos_uniq = 0
           raw.compact_map do |hash|
             tags["pos_uniq"] = pos_uniq.to_s
-            parse_hash(hash, nil, fields, tags, data, timestamp)
             pos_uniq += 1
+            parse_hash(hash, nil, fields, tags, data, timestamp)
           end
         end
       rescue e : JSON::ParseException
