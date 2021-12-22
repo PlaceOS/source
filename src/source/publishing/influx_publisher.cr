@@ -147,7 +147,7 @@ module PlaceOS::Source
       Flux::Point.new!(
         measurement: measurement,
         timestamp: timestamp,
-        tags: tags,
+        tags: tags.dup,
         pos_driver: data.driver_id,
       ).tap &.fields.merge!(local_fields)
     end
