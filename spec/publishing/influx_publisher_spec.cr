@@ -138,6 +138,7 @@ module PlaceOS::Source
             "meraki_floor_id"   => "g_727894289736675",
             "meraki_floor_name" => "BUILDING Name - L2",
           }, {
+            "measurement" => "custom_measurement",
             "location"    => "desk",
             "at_location" => false,
             "map_id"      => "desk-4-1006",
@@ -205,7 +206,7 @@ module PlaceOS::Source
         point.should_not be_nil
         point = point.not_nil!
 
-        point.measurement.should eq "M'Odule"
+        point.measurement.should eq "custom_measurement"
 
         point.timestamp.should eq Time::UNIX_EPOCH
 
@@ -420,6 +421,125 @@ module PlaceOS::Source
           "map_height"        => 123.8,
           "meraki_floor_id"   => "g_727894289736675",
           "meraki_floor_name" => "BUILDING Name - L2",
+        })
+      end
+
+      it "transforms a hash of hashes" do
+        state = mock_state(
+          module_id: "mod-1234",
+          index: 1,
+          module_name: "M'Odule",
+          driver_id: "12345",
+          control_system_id: "cs-9445",
+          area_id: "2042",
+          level_id: "nek",
+          building_id: "cards",
+          org_id: "org-donor",
+        )
+
+        status_event = Mappings.new(state).status_events?("mod-1234", "state").not_nil!.first
+
+        message = Publisher::Message.new(status_event, {
+          key1: {
+            "measurement"       => "custom_measurement",
+            "location"          => "wireless",
+            "coordinates_from"  => "bottom-left",
+            "x"                 => 27.113065326953013,
+            "y"                 => 36.85052447328469,
+            "lon"               => 55.27498749637098,
+            "lat"               => 25.20090608906493,
+            "s2_cell_id"        => "12345",
+            "mac"               => "66e0fd1279ce",
+            "variance"          => 4.5194575835650745,
+            "last_seen"         => 1601555879,
+            "building"          => "zone-EmWLJNm0i~6",
+            "level"             => "zone-Epaq-dE1DaH",
+            "map_width"         => 1234.2,
+            "map_height"        => 123.8,
+            "meraki_floor_id"   => "g_727894289736675",
+            "meraki_floor_name" => "BUILDING Name - L2",
+          },
+          key2: {
+            "location"    => "desk",
+            "at_location" => false,
+            "map_id"      => "desk-4-1006",
+            "mac"         => "66e0fd1279ce",
+            "level"       => "zone_1234",
+            "building"    => "zone_1234",
+          },
+        }.to_json)
+
+        points = InfluxPublisher.transform(message)
+        point = points[0]
+        point.should_not be_nil
+        point = point.not_nil!
+
+        point.measurement.should eq "custom_measurement"
+
+        point.timestamp.should eq Time::UNIX_EPOCH
+
+        point.tags.should eq({
+          "pos_org"      => "org-donor",
+          "pos_building" => "cards",
+          "pos_level"    => "nek",
+          "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_module"   => "M'Odule",
+          "pos_index"    => "1",
+          "pos_uniq"     => "0",
+        })
+
+        point.fields.should eq({
+          "pos_driver"        => "12345",
+          "pos_key"           => "state",
+          "location"          => "wireless",
+          "coordinates_from"  => "bottom-left",
+          "x"                 => 27.113065326953013,
+          "y"                 => 36.85052447328469,
+          "lon"               => 55.27498749637098,
+          "lat"               => 25.20090608906493,
+          "s2_cell_id"        => "12345",
+          "mac"               => "66e0fd1279ce",
+          "variance"          => 4.5194575835650745,
+          "last_seen"         => 1601555879,
+          "building"          => "zone-EmWLJNm0i~6",
+          "level"             => "zone-Epaq-dE1DaH",
+          "map_width"         => 1234.2,
+          "map_height"        => 123.8,
+          "meraki_floor_id"   => "g_727894289736675",
+          "meraki_floor_name" => "BUILDING Name - L2",
+          "parent_hash_key"   => "key1",
+        })
+
+        point = points[1]
+        point.should_not be_nil
+        point = point.not_nil!
+
+        point.measurement.should eq "M'Odule"
+
+        point.timestamp.should eq Time::UNIX_EPOCH
+
+        point.tags.should eq({
+          "pos_org"      => "org-donor",
+          "pos_building" => "cards",
+          "pos_level"    => "nek",
+          "pos_area"     => "2042",
+          "pos_system"   => "cs-9445",
+          "pos_module"   => "M'Odule",
+          "pos_index"    => "1",
+          "pos_uniq"     => "1",
+        })
+
+        point.fields.should eq({
+          "pos_driver"      => "12345",
+          "pos_key"         => "state",
+          "location"        => "desk",
+          "at_location"     => false,
+          "map_id"          => "desk-4-1006",
+          "mac"             => "66e0fd1279ce",
+          "level"           => "zone_1234",
+          "building"        => "zone_1234",
+          "parent_hash_key" => "key2",
         })
       end
     end
