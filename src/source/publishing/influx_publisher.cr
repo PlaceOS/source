@@ -38,7 +38,7 @@ module PlaceOS::Source
       property ts_map : Hash(String, String)?
     end
 
-    alias Value = Flux::Point::FieldType | Hash(String, Flux::Point::FieldType?) | Hash(String, Hash(String, Flux::Point::FieldType?)) | CustomMetrics
+    alias Value = Flux::Point::FieldType | Hash(String, Flux::Point::FieldType?) | Hash(String, Hash(String, Flux::Point::FieldType?)) | Array(Hash(String, Flux::Point::FieldType?)) | CustomMetrics
 
     def initialize(@client : Flux::Client, @bucket : String)
     end
@@ -106,8 +106,18 @@ module PlaceOS::Source
         in Hash(String, Flux::Point::FieldType?)
           [parse_hash(raw, nil, fields, tags, data, timestamp)].compact
         in Hash(String, Hash(String, Flux::Point::FieldType?))
+          pos_uniq = 0
           raw.compact_map do |hash_key, hash|
+            tags["pos_uniq"] = pos_uniq.to_s
+            pos_uniq += 1
             parse_hash(hash, hash_key, fields, tags, data, timestamp)
+          end
+        in Array(Hash(String, Flux::Point::FieldType?))
+          pos_uniq = 0
+          raw.compact_map do |hash|
+            tags["pos_uniq"] = pos_uniq.to_s
+            pos_uniq += 1
+            parse_hash(hash, nil, fields, tags, data, timestamp)
           end
         end
       rescue e : JSON::ParseException
@@ -137,7 +147,7 @@ module PlaceOS::Source
       Flux::Point.new!(
         measurement: measurement,
         timestamp: timestamp,
-        tags: tags,
+        tags: tags.dup,
         pos_driver: data.driver_id,
       ).tap &.fields.merge!(local_fields)
     end
