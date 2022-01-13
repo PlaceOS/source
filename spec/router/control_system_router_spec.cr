@@ -29,7 +29,7 @@ module PlaceOS::Source
       modules = mock_modules(["custom", nil, "custom", "extra_custom", nil])
       cs.modules = modules.compact_map &.id
 
-      Router::ControlSystem.system_modules(cs, modules).should eq ({
+      Router::ControlSystem.system_modules(cs, modules).should eq({
         "mod-0" => {
           name:              "custom",
           control_system_id: "cs-1245",
@@ -63,7 +63,7 @@ module PlaceOS::Source
       cs.id = "cs-1245"
       zones = mock_zones
       cs.zones = zones.compact_map &.id
-      Router::ControlSystem.system_zones(cs, zones).should eq ({
+      Router::ControlSystem.system_zones(cs, zones).should eq({
         "org"      => "zone-0",
         "building" => "zone-1",
         "level"    => "zone-2",
