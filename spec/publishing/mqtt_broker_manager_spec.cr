@@ -14,7 +14,9 @@ module PlaceOS::Source
 
       # Yield to the PublisherManager
       while publisher_manager.processed.empty?
-        Fiber.yield
+        # My guess if its forever looping here its because the creation of a mqtt is blocking
+        # this then blocks IO somewhere
+        sleep 100.milliseconds
       end
 
       publisher = publisher_manager.@publishers[id]?
