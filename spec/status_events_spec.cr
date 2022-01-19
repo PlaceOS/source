@@ -17,7 +17,7 @@ module PlaceOS::Source
       sleep 0.1
 
       Redis.open(url: REDIS_URL) do |client|
-        client.publish("status/#{module_id}/#{status_key}", "on".to_json)
+        client.publish("status/#{module_id}/#{status_key}", expected_payload("on"))
       end
 
       sleep 0.1
@@ -30,7 +30,6 @@ module PlaceOS::Source
 
       key.should eq "placeos/org-donor/state/cards/nek/2042/cs-9445/12345/M'Odule/1/#{status_key}"
       message.payload.should eq expected_payload("on")
-
       events.stop
     end
   end
