@@ -2,6 +2,43 @@ require "../spec_helper"
 
 module PlaceOS::Source
   describe MqttPublisher do
+    describe "#publish" do
+      it "writes to an MQTT topic" do
+        publisher = MqttPublisher.new(test_broker)
+
+        state = mock_state(
+          module_id: "mod-1234",
+          index: 1,
+          module_name: "M'Odule",
+          driver_id: "12345",
+          control_system_id: "cs-9445",
+          area_id: "2042",
+          level_id: "nek",
+          building_id: "cards",
+          org_id: "org-donor",
+        )
+
+        status_event = Mappings.new(state).status_events?("mod-1234", "power").not_nil!.first
+        key = MqttPublisher.generate_key(status_event).not_nil!
+
+        results = Channel(JSON::Any).new
+
+        spawn do
+          client = publisher.new_client
+          client.subscribe(key) do |_key, payload|
+            results.send(JSON.parse(String.new(payload)))
+            client.unsubscribe(key)
+          end
+        end
+
+        sleep 10.milliseconds
+
+        publisher.publish(Publisher::Message.new(status_event, "true"))
+
+        results.receive["value"].should be_true
+      end
+    end
+
     describe "keys" do
       it "creates a state event topic" do
         state = mock_state(

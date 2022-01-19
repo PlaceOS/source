@@ -39,6 +39,10 @@ dependencies:
     github: spider-gazelle/rethinkdb-orm
     version: ">= 4.0.0"
 
+  retriable:
+    github: Sija/retriable.cr
+    version: ~> 0.2
+
   rwlock:
     github: spider-gazelle/readers-writer
 

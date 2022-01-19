@@ -20,7 +20,7 @@ def test_broker
     host: ENV["MQTT_HOST"]?.presence || "localhost",
     port: ENV["MQTT_PORT"]?.presence.try &.to_i? || 1883,
     auth_type: :no_auth,
-  )
+  ).save!
 end
 
 module PlaceOS::Source

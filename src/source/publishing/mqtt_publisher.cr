@@ -2,6 +2,7 @@ require "file"
 require "json"
 require "mqtt/v3/client"
 require "placeos-models/broker"
+require "retriable"
 require "rwlock"
 
 require "./publisher"
@@ -24,7 +25,7 @@ module PlaceOS::Source
     end
 
     def self.payload(value, broker : PlaceOS::Model::Broker?, timestamp : Time = self.timestamp)
-      value = broker.sanitize(value) unless broker.nil?
+      value = broker.sanitize(value) unless broker.nil? || value.nil?
       Event.new(value, timestamp).to_json
     end
 
@@ -33,6 +34,10 @@ module PlaceOS::Source
     protected getter client : ::MQTT::V3::Client
 
     def initialize(@broker : PlaceOS::Model::Broker)
+      @client = new_client
+    end
+
+    protected def new_client
       @client = MqttPublisher.client(@broker)
     end
 
@@ -70,25 +75,34 @@ module PlaceOS::Source
       # Establish a MQTT connection
       client = ::MQTT::V3::Client.new(transport)
 
-      spawn do
-        client.connect
-      end
+      client.connect(
+        client_id: broker.id.as(String),
+        username: broker.username,
+        password: broker.password,
+      )
 
       client
     end
 
     protected def publish(message : Message)
-      if (key = MqttPublisher.generate_key?(message.data))
+      if (key = MqttPublisher.generate_key(message.data))
         # Sanitize the message payload according the Broker's filters
         payload = broker_lock.read do
           MqttPublisher.payload(message.payload, broker)
         end
 
-        case message.data
-        # Update persistent 'metadata' topic (includes deleting)
-        in Mappings::Metadata then client.publish(topic: key, payload: payload, retain: true)
-          # Publish event to the 'status' topic
-        in Mappings::Status then client.publish(topic: key, payload: payload)
+        retain = case message.data
+                 # Publish event to the 'status' topic
+                 in Mappings::Metadata then false
+                   # Update persistent 'metadata' topic (includes deleting)
+                 in Mappings::Status then true
+                 end
+
+        Retriable.retry(on: IO::Error | MQTT::Error, on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
+          Log.error(exception: e) { "MQTT connection error, reconnecting..." }
+          new_client
+        }) do
+          client.publish(topic: key, payload: payload, retain: retain)
         end
       end
     rescue e
@@ -122,7 +136,10 @@ module PlaceOS::Source
       scope_value = hierarchy_values.first?
 
       # Prevent publishing events with unspecified top-level scope
-      return if scope_value.nil? || scope_value == "_"
+      if scope_value.nil? || scope_value == "_"
+        Log.debug { "#{data.status} event for #{data.module_id} ignored due to missing top-level scope" }
+        return
+      end
 
       # Construct key path dependent on Zone hierarchy
       subhierarchy = File.join(hierarchy_values[1..])
