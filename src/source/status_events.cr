@@ -1,5 +1,5 @@
 require "redis"
-require "simple_retry"
+require "retriable"
 
 require "./mappings"
 require "./publishing/publisher"
@@ -23,10 +23,10 @@ module PlaceOS::Source
     def start
       self.stopped = false
 
-      SimpleRetry.try_to(
+      Retriable.retry(
         base_interval: 1.second,
         max_interval: 5.seconds,
-        randomise: 500.milliseconds
+        rand_factor: 0.5
       ) do
         begin
           redis.psubscribe(STATUS_CHANNEL_PATTERN) do |callbacks|

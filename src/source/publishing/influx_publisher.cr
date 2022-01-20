@@ -2,7 +2,6 @@ require "flux"
 require "mqtt"
 require "openssl"
 require "random"
-require "simple_retry"
 require "time"
 
 require "./publisher"

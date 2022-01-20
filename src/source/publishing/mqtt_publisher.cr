@@ -4,6 +4,7 @@ require "mqtt/v3/client"
 require "placeos-models/broker"
 require "retriable"
 require "rwlock"
+require "tasker"
 
 require "./publisher"
 
@@ -75,11 +76,27 @@ module PlaceOS::Source
       # Establish a MQTT connection
       client = ::MQTT::V3::Client.new(transport)
 
+      keep_alive = 60
+
       client.connect(
         client_id: broker.id.as(String),
+        keep_alive: keep_alive,
         username: broker.username,
         password: broker.password,
       )
+
+      close_channel = Channel(Nil).new(1)
+
+      repeating_task = Tasker.every((keep_alive // 3).seconds) do
+        close_channel.close if client.closed?
+      end
+
+      # Spawn a helper fiber to cancel the repeating ping task
+      spawn do
+        # Block waiting for close event
+        close_channel.receive?
+        repeating_task.cancel
+      end
 
       client
     end

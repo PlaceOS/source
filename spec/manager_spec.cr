@@ -1,3 +1,5 @@
+require "./spec_helper"
+
 module PlaceOS::Source
   describe Manager do
     it "provides concurrent publication to several stores" do
