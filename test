@@ -15,7 +15,7 @@ trap "trap_ctrlc" 2
 
 ./scripts/generate-secrets
 
-# docker-compose pull -q
+docker-compose pull -q
 
 docker-compose up --no-deps --detach influxdb
 
