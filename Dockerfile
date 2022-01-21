@@ -1,4 +1,4 @@
-ARG CRYSTAL_VERSION=1.3.1
+ARG CRYSTAL_VERSION=1.3.2
 FROM crystallang/crystal:${CRYSTAL_VERSION}-alpine as build
 WORKDIR /app
 
@@ -36,7 +36,11 @@ COPY src /app/src
 RUN UNAME_AT_COMPILE_TIME=true \
     PLACE_COMMIT=$PLACE_COMMIT \
     PLACE_VERSION=$PLACE_VERSION \
-    crystal build --error-trace --release /app/src/app.cr -o /app/source
+    crystal build \
+    --error-trace \
+    --release \
+    -o /app/source \
+    /app/src/app.cr
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
