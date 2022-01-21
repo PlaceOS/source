@@ -3,6 +3,9 @@ require "./spec_helper"
 module PlaceOS::Source
   describe Manager do
     it "provides concurrent publication to several stores" do
+      # Create a test broker
+      test_broker
+
       publisher_managers = [] of PublisherManager
 
       publisher_managers << MqttBrokerManager.new
@@ -30,6 +33,8 @@ module PlaceOS::Source
       Redis.open(url: REDIS_URL) do |client|
         client.publish("status/#{module_id}/#{status_key}", "on".to_json)
       end
+
+      sleep 50.milliseconds
 
       message = begin
         Retriable.retry(max_attempts: 5, base_interval: 20.milliseconds) do

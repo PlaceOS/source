@@ -35,7 +35,7 @@ module PlaceOS::Source
       @started = true
 
       Log.info { "registering Publishers" }
-      publisher_managers.each &.start
+      publisher_managers.each(&.start)
 
       # Acquire the Zones (hierarchy) first
       Log.info { "starting Zone router" }

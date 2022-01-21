@@ -8,7 +8,7 @@ require "../src/source/*"
 
 Spec.before_suite do
   PlaceOS::Model::Broker.clear
-  ::Log.setup "*", :debug, PlaceOS::LogBackend.log_backend
+  ::Log.setup "*", :trace, PlaceOS::LogBackend.log_backend
 end
 
 def expected_payload(value)

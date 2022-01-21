@@ -115,7 +115,9 @@ module PlaceOS::Source
                  in Mappings::Status then true
                  end
 
-        Retriable.retry(on: IO::Error | MQTT::Error, on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
+        Log.trace { {message: "writing to MQTT", key: key, retain: retain} }
+
+        Retriable.retry(max_attempts: 20, on: IO::Error | MQTT::Error, on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
           Log.error(exception: e) { "MQTT connection error, reconnecting..." }
           new_client
         }) do
