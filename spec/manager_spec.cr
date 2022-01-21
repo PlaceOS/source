@@ -25,7 +25,7 @@ module PlaceOS::Source
       manager = Manager.new(publisher_managers, mock_mappings)
       manager.start
 
-      sleep 20.milliseconds
+      sleep 50.milliseconds
 
       Redis.open(url: REDIS_URL) do |client|
         client.publish("status/#{module_id}/#{status_key}", "on".to_json)
