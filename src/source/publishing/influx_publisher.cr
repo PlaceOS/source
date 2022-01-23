@@ -2,7 +2,6 @@ require "flux"
 require "mqtt"
 require "openssl"
 require "random"
-require "simple_retry"
 require "time"
 
 require "./publisher"
@@ -48,7 +47,7 @@ module PlaceOS::Source
     def publish(message : Publisher::Message)
       points = self.class.transform(message)
       points.each do |point|
-        Log.debug { {
+        Log.trace { {
           measurement: point.measurement,
           timestamp:   point.timestamp.to_s,
           tags:        point.tags.to_json,

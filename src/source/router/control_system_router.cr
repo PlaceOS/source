@@ -146,13 +146,13 @@ module PlaceOS::Source::Router
     # Get zones
     protected def self._system_zones(control_system : PlaceOS::Model::ControlSystem)
       zone_list = control_system.zones || [] of String
-      PlaceOS::Model::Zone.get_all(zone_list)
+      PlaceOS::Model::Zone.find_all(zone_list)
     end
 
     # Get modules
     protected def self._system_modules(control_system : PlaceOS::Model::ControlSystem)
       module_ids = control_system.modules || [] of String
-      PlaceOS::Model::Module.get_all(module_ids)
+      PlaceOS::Model::Module.find_all(module_ids)
     end
   end
 end

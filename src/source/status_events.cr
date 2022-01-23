@@ -1,5 +1,5 @@
 require "redis"
-require "simple_retry"
+require "retriable"
 
 require "./mappings"
 require "./publishing/publisher"
@@ -23,10 +23,10 @@ module PlaceOS::Source
     def start
       self.stopped = false
 
-      SimpleRetry.try_to(
-        base_interval: 1.second,
+      Retriable.retry(
+        base_interval: 500.milliseconds,
         max_interval: 5.seconds,
-        randomise: 500.milliseconds
+        rand_factor: 0.5
       ) do
         begin
           redis.psubscribe(STATUS_CHANNEL_PATTERN) do |callbacks|
@@ -55,10 +55,11 @@ module PlaceOS::Source
         channel: channel,
       } }
 
-      if events
-        events.each do |event|
-          message = Publisher::Message.new(event, payload)
-          publisher_managers.each &.broadcast(message)
+      events.try &.each do |event|
+        message = Publisher::Message.new(event, payload)
+        publisher_managers.each do |manager|
+          Log.trace { "broadcasting message to #{manager.class}" }
+          spawn { manager.broadcast(message) }
         end
       end
     end

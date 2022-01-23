@@ -4,9 +4,11 @@ module PlaceOS::Source
   abstract class Publisher
     Log = ::Log.for(self)
 
-    record Message,
+    record(
+      Message,
       data : Mappings::Data,
       payload : String?
+    )
 
     getter message_queue : Channel(Message) = Channel(Message).new
 

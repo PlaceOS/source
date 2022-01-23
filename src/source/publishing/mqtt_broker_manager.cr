@@ -45,7 +45,13 @@ module PlaceOS::Source
     #
     protected def create_publisher(broker : Model::Broker) : Resource::Result
       broker_id = broker.id.as(String)
-      publisher = MqttPublisher.new(broker)
+      begin
+        publisher = MqttPublisher.new(broker)
+      rescue e : IO::Error
+        Log.error(exception: e) { "failed to connect to broker on #{broker.host}:#{broker.port}" }
+        return Resource::Result::Error
+      end
+
       write_publishers do |publishers|
         # Close off exisiting publisher, if present
         existing = publishers[broker_id]?

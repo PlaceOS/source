@@ -7,7 +7,8 @@ require "../src/placeos-source"
 require "../src/source/*"
 
 Spec.before_suite do
-  ::Log.setup "*", :debug, PlaceOS::LogBackend.log_backend
+  PlaceOS::Model::Broker.clear
+  ::Log.setup "*", :trace, PlaceOS::LogBackend.log_backend
 end
 
 def expected_payload(value)
@@ -15,11 +16,15 @@ def expected_payload(value)
 end
 
 def test_broker
+  existing = PlaceOS::Model::Broker.where(name: "mosquitto").first?
+  return existing if existing
+
   PlaceOS::Model::Broker.new(
     name: "mosquitto",
     host: ENV["MQTT_HOST"]?.presence || "localhost",
     port: ENV["MQTT_PORT"]?.presence.try &.to_i? || 1883,
-  )
+    auth_type: :no_auth,
+  ).save!
 end
 
 module PlaceOS::Source
