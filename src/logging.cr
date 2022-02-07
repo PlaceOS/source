@@ -8,12 +8,18 @@ module PlaceOS::Source::Logging
   log_backend = PlaceOS::LogBackend.log_backend
 
   namespaces = ["place_os.#{Source::APP_NAME}.*", "action-controller"]
-  ::Log.setup do |config|
-    config.bind "*", :warn, log_backend
-    namespaces.each do |namespace|
-      config.bind namespace, log_level, log_backend
-    end
+
+  builder = ::Log.builder
+  builder.bind("*", :warn, log_backend)
+  namespaces.each do |namespace|
+    builder.bind(namespace, log_level, log_backend)
   end
+
+  ::Log.setup_from_env(
+    default_level: log_level,
+    builder: builder,
+    backend: log_backend
+  )
 
   PlaceOS::LogBackend.register_severity_switch_signals(
     production: Source.production?,
