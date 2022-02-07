@@ -59,6 +59,8 @@ module PlaceOS::Source
         publishers[broker_id] = publisher
       end
 
+      publisher.start
+
       Resource::Result::Success
     end
 
