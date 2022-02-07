@@ -5,9 +5,10 @@ module PlaceOS::Source
     describe "#publish" do
       it "writes to an MQTT topic" do
         publisher = MqttPublisher.new(test_broker)
+        module_id = UUID.random.to_s
 
         state = mock_state(
-          module_id: "mod-1234",
+          module_id: module_id,
           index: 1,
           module_name: "M'Odule",
           driver_id: "12345",
@@ -18,7 +19,7 @@ module PlaceOS::Source
           org_id: "org-donor",
         )
 
-        status_event = Mappings.new(state).status_events?("mod-1234", "power").not_nil!.first
+        status_event = Mappings.new(state).status_events?(module_id, "power").not_nil!.first
         key = MqttPublisher.generate_key(status_event).not_nil!
 
         results = Channel(JSON::Any).new
