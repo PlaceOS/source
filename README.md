@@ -1,6 +1,6 @@
 # PlaceOS State Source Service
 
-[![Build Dev Image](https://github.com/PlaceOS/source/actions/workflows/build-dev-image.yml/badge.svg)](https://github.com/PlaceOS/source/actions/workflows/build-dev-image.yml)
+[![Build](https://github.com/PlaceOS/source/actions/workflows/build.yml/badge.svg)](https://github.com/PlaceOS/source/actions/workflows/build.yml)
 [![CI](https://github.com/PlaceOS/source/actions/workflows/ci.yml/badge.svg)](https://github.com/PlaceOS/source/actions/workflows/ci.yml)
 
 Service that publishes PlaceOS module state.
