@@ -105,12 +105,12 @@ shards:
     version: 2.8.3
 
   rethinkdb:
-    git: https://github.com/place-labs/crystal-rethinkdb.git
-    version: 0.3.1+git.commit.07ce7c694a367efe3af9f8cb5670bc4bff5b6df0
+    git: https://github.com/kingsleyh/crystal-rethinkdb.git
+    version: 0.3.1
 
   rethinkdb-orm:
     git: https://github.com/spider-gazelle/rethinkdb-orm.git
-    version: 6.0.0
+    version: 6.0.1
 
   retriable:
     git: https://github.com/sija/retriable.cr.git
