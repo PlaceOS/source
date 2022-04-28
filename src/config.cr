@@ -7,6 +7,9 @@ require "action-controller"
 require "./placeos-source"
 require "./controllers/*"
 
+# Add telemetry after application code
+require "./telemetry"
+
 # Server required after application controllers
 require "action-controller/server"
 
