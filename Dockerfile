@@ -24,8 +24,9 @@ RUN adduser \
 # Add trusted CAs for communicating with external services
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 
-COPY shard.yml .
-COPY shard.lock .
+COPY shard.yml shard.yml
+COPY shard.override.yml shard.override.yml
+COPY shard.lock shard.lock
 
 RUN shards install --production --ignore-crystal-version
 
