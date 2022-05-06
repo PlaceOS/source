@@ -1,4 +1,4 @@
-## Unreleased
+## v1.6.0 (2022-05-06)
 
 ### Fix
 
@@ -15,15 +15,15 @@
 
 ### Refactor
 
-- central build CI (#32)
+- central build CI ([#32](https://github.com/PlaceOS/source/pull/32))
 
 ## v1.5.0 (2022-01-24)
 
 ### Fix
 
-- creating mqtt publisher blocks (#29)
-- **publishing influx**: tags are required to be unique (#28)
-- **influx publishing**: the system id needs to be indexed (#17)
+- creating mqtt publisher blocks ([#29](https://github.com/PlaceOS/source/pull/29))
+- **publishing influx**: tags are required to be unique ([#28](https://github.com/PlaceOS/source/pull/28))
+- **influx publishing**: the system id needs to be indexed ([#17](https://github.com/PlaceOS/source/pull/17))
 - **publishing publisher**: handle publish exceptions
 - **publishing publisher**: handle publish exceptions
 - **logging**: change redis pevent log to debug
@@ -36,7 +36,7 @@
 
 ### Feat
 
-- **influx publisher**: allow drivers to define measurement names (#27)
+- **influx publisher**: allow drivers to define measurement names ([#27](https://github.com/PlaceOS/source/pull/27))
 - **influx publisher**: adds support for nested hashes
 - **influx publisher**: adds support for nest hashes
 - **shard.lock**: bump deps
@@ -48,7 +48,7 @@
 
 ### Perf
 
-- **influx_publisher**: return earlier if no payload (#24)
+- **influx_publisher**: return earlier if no payload ([#24](https://github.com/PlaceOS/source/pull/24))
 
 ## v1.2.0 (2020-09-17)
 
@@ -74,7 +74,7 @@
 
 ### Feat
 
-- InfluxDB publishing (#4)
+- InfluxDB publishing ([#4](https://github.com/PlaceOS/source/pull/4))
 - **manager**: add `MQTT::StausEvents` to `Manager`
 - **publisher**: MQTT client from `PlaceOS::Model::Broker`
 - **router:control_system**: implement handler
