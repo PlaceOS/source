@@ -44,6 +44,8 @@ services:
       - redis
       - rethink
       - influxdb
+    security_opt:
+      - seccomp:unconfined
     env_file:
       - *influxdb-api-key
     environment:
