@@ -1,6 +1,16 @@
-## Unreleased
+## v1.7.0 (2022-09-04)
+
+### Feat
+
+- update action controller ([#40](https://github.com/PlaceOS/source/pull/40))
 
 ## v1.6.0 (2022-05-06)
+
+### Feat
+
+- **logging**: configure OpenTelemetry
+- **logging**: set up from env
+- **mqtt_broker_manager**: add logs for rw lock
 
 ### Fix
 
@@ -9,24 +19,28 @@
 - **telemetry**: seperate telemetry folder
 - **mqtt_broker_manager**: start created publisher
 
-### Feat
-
-- **logging**: configure OpenTelemetry
-- **logging**: set up from env
-- **mqtt_broker_manager**: add logs for rw lock
-
 ### Refactor
 
 - central build CI ([#32](https://github.com/PlaceOS/source/pull/32))
 
 ## v1.5.0 (2022-01-24)
 
+### Feat
+
+- **influx publisher**: allow drivers to define measurement names ([#27](https://github.com/PlaceOS/source/pull/27))
+- **influx publisher**: adds support for nest hashes
+- **shard.lock**: bump deps
+- add healthcheck and version
+- **logging**: configure `Log.progname`
+- **logstash**: add placeos-log-backend
+- **influx publisher**: add support for custom metrics
+- **influx_publisher.cr**: use status name as field name
+
 ### Fix
 
 - creating mqtt publisher blocks ([#29](https://github.com/PlaceOS/source/pull/29))
 - **publishing influx**: tags are required to be unique ([#28](https://github.com/PlaceOS/source/pull/28))
 - **influx publishing**: the system id needs to be indexed ([#17](https://github.com/PlaceOS/source/pull/17))
-- **publishing publisher**: handle publish exceptions
 - **publishing publisher**: handle publish exceptions
 - **logging**: change redis pevent log to debug
 - **logging**: remove pevent payload and lower to trace
@@ -35,18 +49,6 @@
 - **status_events**: verbose logging
 - **influx-publisher**: forward start to publisher
 - dev builds
-
-### Feat
-
-- **influx publisher**: allow drivers to define measurement names ([#27](https://github.com/PlaceOS/source/pull/27))
-- **influx publisher**: adds support for nested hashes
-- **influx publisher**: adds support for nest hashes
-- **shard.lock**: bump deps
-- add healthcheck and version
-- **logging**: configure `Log.progname`
-- **logstash**: add placeos-log-backend
-- **influx publisher**: add support for custom metrics
-- **influx_publisher.cr**: use status name as field name
 
 ### Perf
 
@@ -60,6 +62,10 @@
 
 ## v1.1.0 (2020-09-17)
 
+### Feat
+
+- **controllers:root**: add healthcheck on root
+
 ### Fix
 
 - **mappings**: temporary fix for readers-writer deadlock on reentrant writes
@@ -67,10 +73,6 @@
 ### Refactor
 
 - finish migration from mqtt name
-
-### Feat
-
-- **controllers:root**: add healthcheck on root
 
 ## v1.0.0 (2020-09-04)
 
@@ -91,7 +93,6 @@
 
 ### Fix
 
-- **publisher**: add a timestamp to the mqtt payload
 - **publisher**: add a timestamp to the mqtt payload
 - **status_events**: broadcast to all keys generated from a status event
 - **mappings**: scope topics beneath `placeos` topic
