@@ -6,12 +6,15 @@ module PlaceOS::Source::Api
   class Root < Application
     base "/api/source/v1/"
 
-    def index
-      head self.class.healthcheck? ? HTTP::Status::OK : HTTP::Status::INTERNAL_SERVER_ERROR
+    # healthcheck, returns OK if all connections are good
+    @[AC::Route::GET("/")]
+    def index : Nil
+      raise "health check failed" unless self.class.healthcheck?
     end
 
-    get "/version", :version do
-      render :ok, json: PlaceOS::Model::Version.new(
+    @[AC::Route::GET("/version")]
+    def version : PlaceOS::Model::Version
+      PlaceOS::Model::Version.new(
         version: VERSION,
         build_time: BUILD_TIME,
         commit: BUILD_COMMIT,

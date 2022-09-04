@@ -22,21 +22,21 @@ module PlaceOS::Source
         status_event = Mappings.new(state).status_events?(module_id, "power").not_nil!.first
         key = MqttPublisher.generate_key(status_event).not_nil!
 
-        results = Channel(JSON::Any).new
+        last_value = nil
 
-        spawn do
-          client = publisher.new_client
+        client = publisher.new_client
+        spawn(same_thread: true) do
           client.subscribe(key) do |_key, payload|
-            results.send(JSON.parse(String.new(payload)))
-            client.unsubscribe(key)
+            last_value = JSON.parse(String.new(payload))
           end
         end
 
-        sleep 10.milliseconds
-
+        sleep 100.milliseconds
         publisher.publish(Publisher::Message.new(status_event, "true"))
+        sleep 100.milliseconds
+        client.unsubscribe(key)
 
-        results.receive["value"].should be_true
+        last_value.try(&.[]("value")).should be_true
       end
     end
 
