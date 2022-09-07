@@ -1,3 +1,9 @@
+## v1.8.0 (2022-09-07)
+
+### Feat
+
+- add ARM64 image support ([#41](https://github.com/PlaceOS/source/pull/41))
+
 ## v1.7.0 (2022-09-04)
 
 ### Feat
