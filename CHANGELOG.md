@@ -1,3 +1,9 @@
+## v1.8.1 (2022-09-08)
+
+### Fix
+
+- **Dockerfile**: revert static build ([#42](https://github.com/PlaceOS/source/pull/42))
+
 ## v1.8.0 (2022-09-07)
 
 ### Feat
