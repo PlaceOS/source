@@ -1,3 +1,9 @@
+## v1.9.0 (2022-09-08)
+
+### Feat
+
+- **shard.lock**: bump libs ([#43](https://github.com/PlaceOS/source/pull/43))
+
 ## v1.8.1 (2022-09-08)
 
 ### Fix
