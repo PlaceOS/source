@@ -36,6 +36,14 @@ module PlaceOS::Source
         # Look up module's driver_id
         driver_id = state.drivers[module_id]?
         if driver_id.nil?
+          if mod = Model::Module.find(module_id)
+            driver_id = mod.driver_id.not_nil!
+            write { |new_state| new_state.drivers[module_id] = driver_id }
+          end
+        end
+
+        # Complain if we couldn't find it
+        if driver_id.nil?
           Log.warn { "missing driver_id for Module<#{module_id}>" }
           return
         end
