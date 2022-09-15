@@ -1,3 +1,9 @@
+## v1.9.1 (2022-09-15)
+
+### Fix
+
+- **mappings**: lazy load in the driver ids if they don't exist ([#44](https://github.com/PlaceOS/source/pull/44))
+
 ## v1.9.0 (2022-09-08)
 
 ### Feat
