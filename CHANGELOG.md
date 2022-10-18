@@ -1,3 +1,9 @@
+## v1.9.2 (2022-10-18)
+
+### Fix
+
+- **publishing/influx_publisher**: use float64 for numeric field types ([#46](https://github.com/PlaceOS/source/pull/46))
+
 ## v1.9.1 (2022-09-15)
 
 ### Fix
