@@ -1,5 +1,5 @@
 require "redis"
-require "retriable"
+require "simple_retry"
 
 require "./mappings"
 require "./publishing/publisher"
@@ -11,37 +11,40 @@ module PlaceOS::Source
 
     STATUS_CHANNEL_PATTERN = "status/#{Model::Module.table_name}-*"
 
-    getter redis : Redis
+    private getter! redis : Redis
     private getter mappings : Mappings
     private getter publisher_managers : Array(PublisherManager)
 
     private property? stopped : Bool = true
 
-    def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager), @redis : Redis = StatusEvents.new_redis)
+    def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
     end
 
     def start
       self.stopped = false
 
-      Retriable.retry(
+      SimpleRetry.try_to(
         base_interval: 500.milliseconds,
         max_interval: 5.seconds,
-        rand_factor: 0.5
+        randomise: 500.milliseconds
       ) do
-        begin
-          redis.psubscribe(STATUS_CHANNEL_PATTERN) do |callbacks|
+        unless stopped?
+          @redis = new_redis = StatusEvents.new_redis
+          new_redis.psubscribe(STATUS_CHANNEL_PATTERN) do |callbacks|
             callbacks.pmessage &->handle_pevent(String, String, String)
           end
-        ensure
-          @redis = StatusEvents.new_redis unless stopped?
+          raise "subscription loop exited, restarting loop" unless stopped?
         end
       end
     end
 
     def stop
       self.stopped = true
-
-      redis.punsubscribe(STATUS_CHANNEL_PATTERN)
+      return unless @redis
+      begin
+        redis.punsubscribe(STATUS_CHANNEL_PATTERN)
+      rescue
+      end
       redis.close
     end
 
