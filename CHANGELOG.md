@@ -1,3 +1,9 @@
+## v1.9.3 (2022-10-25)
+
+### Fix
+
+- **status_events**: switch to simple_retry ([#48](https://github.com/PlaceOS/source/pull/48))
+
 ## v1.9.2 (2022-10-18)
 
 ### Fix
