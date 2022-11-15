@@ -9,6 +9,10 @@ targets:
     main: src/app.cr
 
 dependencies:
+  placeos-driver:
+    github: placeos/driver
+    version: ~> 6.3
+
   action-controller:
     github: spider-gazelle/action-controller
     version: ~> 5.3
