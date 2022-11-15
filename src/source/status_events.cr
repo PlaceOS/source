@@ -71,8 +71,8 @@ module PlaceOS::Source
       end
       Log.info { {
         message: "initial status sync complete",
-        modules: mods_mapped,
-        values: status_updated,
+        modules: mods_mapped.to_s,
+        values: status_updated.to_s,
       } }
     end
 
