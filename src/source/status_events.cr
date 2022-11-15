@@ -42,8 +42,6 @@ module PlaceOS::Source
     end
 
     def stop
-      update_values
-
       self.stopped = true
 
       return unless @redis
