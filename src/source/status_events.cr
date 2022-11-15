@@ -20,11 +20,12 @@ module PlaceOS::Source
 
     def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
     end
+    
+    @update_mutex : Mutex = Mutex.new
 
     def start
-      update_values
-
       self.stopped = false
+      spawn(same_thread: true) { @update_mutex.synchronize { update_values } }
 
       SimpleRetry.try_to(
         base_interval: 500.milliseconds,
