@@ -20,7 +20,7 @@ module PlaceOS::Source
 
     def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
     end
-    
+
     @update_mutex : Mutex = Mutex.new
 
     def start
@@ -72,7 +72,7 @@ module PlaceOS::Source
       Log.info { {
         message: "initial status sync complete",
         modules: mods_mapped.to_s,
-        values: status_updated.to_s,
+        values:  status_updated.to_s,
       } }
     end
 
