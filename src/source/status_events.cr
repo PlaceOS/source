@@ -56,6 +56,7 @@ module PlaceOS::Source
     def update_values
       PlaceOS::Model::Module.all.in_groups_of(64, reuse: true) do |modules|
         modules.each do |mod|
+          break unless mod
           store = PlaceOS::Driver::RedisStorage.new(mod.id.to_s)
           store.each do |key, value|
             handle_pevent(pattern: STATUS_CHANNEL_PATTERN, channel: key, payload: value)
