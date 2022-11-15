@@ -55,15 +55,25 @@ module PlaceOS::Source
     end
 
     def update_values
+      mods_mapped = 0_u64
+      status_updated = 0_u64
+      pattern = "initial_sync"
       PlaceOS::Model::Module.all.in_groups_of(64, reuse: true) do |modules|
         modules.each do |mod|
           break unless mod
+          mods_mapped += 1_u64
           store = PlaceOS::Driver::RedisStorage.new(mod.id.to_s)
           store.each do |key, value|
-            handle_pevent(pattern: STATUS_CHANNEL_PATTERN, channel: key, payload: value)
+            status_updated += 1_u64
+            handle_pevent(pattern: pattern, channel: key, payload: value)
           end
         end
       end
+      Log.info { {
+        message: "initial status sync complete",
+        modules: mods_mapped,
+        values: status_updated,
+      } }
     end
 
     protected def handle_pevent(pattern : String, channel : String, payload : String)
