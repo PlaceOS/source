@@ -60,8 +60,8 @@ module PlaceOS::Source
         modules.each do |mod|
           store = PlaceOS::Driver::RedisStorage.new(mod.try(&.id) || raise Exception.new("Nil assertion failed since the module is Nil"))
           store.each do |key, value|
-              handle_pevent(pattern: STATUS_CHANNEL_PATTERN, channel: key, payload: value)
-           end
+            handle_pevent(pattern: STATUS_CHANNEL_PATTERN, channel: key, payload: value)
+          end
         end
       end
     end
