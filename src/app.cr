@@ -37,6 +37,15 @@ module PlaceOS::Source
       end
     end
 
+    parser.on("-d", "--docs", "Outputs OpenAPI documentation for this service") do
+      puts ActionController::OpenAPI.generate_open_api_docs(
+        title: PlaceOS::Source::APP_NAME,
+        version: PlaceOS::Source::VERSION,
+        description: "PlaceOS Source Service, saves state to InfluxDB and handles MQTT output"
+      ).to_yaml
+      exit 0
+    end
+
     parser.invalid_option do |flag|
       STDERR.puts "ERROR: #{flag} unrecognised"
       puts parser

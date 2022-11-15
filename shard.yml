@@ -1,5 +1,5 @@
 name: placeos-source
-version: 1.6.0
+version: 1.9.3
 crystal: ~> 1
 authors:
   - Caspian Baska <caspian@place.technology>
@@ -15,7 +15,7 @@ dependencies:
 
   action-controller:
     github: spider-gazelle/action-controller
-    version: ~> 4.4
+    version: ~> 5.3
 
   flux:
     github: place-labs/flux
@@ -44,9 +44,8 @@ dependencies:
     github: spider-gazelle/rethinkdb-orm
     version: ">= 4.0.0"
 
-  retriable:
-    github: Sija/retriable.cr
-    version: ~> 0.2
+  simple_retry:
+    github: spider-gazelle/simple_retry
 
   rwlock:
     github: spider-gazelle/readers-writer

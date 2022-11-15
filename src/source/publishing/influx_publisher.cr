@@ -15,6 +15,8 @@ module PlaceOS::Source
     getter client : Flux::Client
     getter bucket : String
 
+    alias FieldTypes = Bool | Float64 | String
+
     abstract class CustomMetrics
       include JSON::Serializable
 
@@ -23,7 +25,7 @@ module PlaceOS::Source
 
       # Add these tags and fields to all the values
       property ts_tags : Hash(String, String?)?
-      property ts_fields : Hash(String, Flux::Point::FieldType?)?
+      property ts_fields : Hash(String, FieldTypes?)?
 
       # Allow custom measurement name to be used for entries
       property measurement : String?
@@ -32,12 +34,12 @@ module PlaceOS::Source
     class ComplexMetric < CustomMetrics
       getter ts_hint : String = "complex"
 
-      property value : Array(Hash(String, Flux::Point::FieldType?))
+      property value : Array(Hash(String, FieldTypes?))
       property ts_tag_keys : Array(String)?
       property ts_map : Hash(String, String)?
     end
 
-    alias Value = Flux::Point::FieldType | Hash(String, Flux::Point::FieldType?) | Hash(String, Hash(String, Flux::Point::FieldType?)) | Array(Hash(String, Flux::Point::FieldType?)) | CustomMetrics
+    alias Value = FieldTypes | Hash(String, FieldTypes?) | Hash(String, Hash(String, FieldTypes?)) | Array(Hash(String, FieldTypes?)) | CustomMetrics
 
     def initialize(@client : Flux::Client, @bucket : String)
     end
@@ -92,7 +94,7 @@ module PlaceOS::Source
       begin
         case raw = Value.from_json(payload)
         in CustomMetrics then parse_custom(raw, fields, tags, data, timestamp)
-        in Flux::Point::FieldType
+        in FieldTypes
           fields[key] = raw
           point = Flux::Point.new!(
             measurement: data.module_name,
@@ -102,16 +104,16 @@ module PlaceOS::Source
           ).tap &.fields.merge!(fields)
 
           [point]
-        in Hash(String, Flux::Point::FieldType?)
+        in Hash(String, FieldTypes?)
           [parse_hash(raw, nil, fields, tags, data, timestamp)].compact
-        in Hash(String, Hash(String, Flux::Point::FieldType?))
+        in Hash(String, Hash(String, FieldTypes?))
           pos_uniq = 0
           raw.compact_map do |hash_key, hash|
             tags["pos_uniq"] = pos_uniq.to_s
             pos_uniq += 1
             parse_hash(hash, hash_key, fields, tags, data, timestamp)
           end
-        in Array(Hash(String, Flux::Point::FieldType?))
+        in Array(Hash(String, FieldTypes?))
           pos_uniq = 0
           raw.compact_map do |hash|
             tags["pos_uniq"] = pos_uniq.to_s

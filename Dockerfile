@@ -1,9 +1,11 @@
-ARG CRYSTAL_VERSION=1.3.2
-FROM crystallang/crystal:${CRYSTAL_VERSION}-alpine as build
+ARG CRYSTAL_VERSION=latest
+
+FROM placeos/crystal:$CRYSTAL_VERSION as build
 WORKDIR /app
 
-# Set the commit through a build arg
+# Set the commit via a build arg
 ARG PLACE_COMMIT="DEV"
+# Set the platform version via a build arg
 ARG PLACE_VERSION="DEV"
 
 # Create a non-privileged user, defaults are appuser:10001
@@ -21,14 +23,12 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
-# Add trusted CAs for communicating with external services
-RUN apk add --no-cache ca-certificates && update-ca-certificates
-
+# Install shards for caching
 COPY shard.yml shard.yml
 COPY shard.override.yml shard.override.yml
 COPY shard.lock shard.lock
 
-RUN shards install --production --ignore-crystal-version
+RUN shards install --production --ignore-crystal-version --skip-postinstall --skip-executables
 
 # Add source last for efficient caching
 COPY src /app/src
@@ -37,24 +37,26 @@ COPY src /app/src
 RUN UNAME_AT_COMPILE_TIME=true \
     PLACE_COMMIT=$PLACE_COMMIT \
     PLACE_VERSION=$PLACE_VERSION \
-    crystal build \
-    --error-trace \
-    --release \
-    -o /app/source \
-    /app/src/app.cr
+    shards build --production --release --error-trace
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-# Extract dependencies
-RUN ldd /app/source | tr -s '[:blank:]' '\n' | grep '^/' | \
-    xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'
+# Extract binary dependencies
+RUN for binary in /app/bin/*; do \
+        ldd "$binary" | \
+        tr -s '[:blank:]' '\n' | \
+        grep '^/' | \
+        xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
+    done
 
 # Build a minimal docker image
 FROM scratch
 WORKDIR /
 ENV PATH=$PATH:/
-COPY --from=build /app/deps /
-COPY --from=build /app/source /source
+
+# Copy the user information over
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/group /etc/group
 
 # These are required for communicating with external services
 COPY --from=build /etc/hosts /etc/hosts
@@ -66,9 +68,9 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 # This is required for Timezone support
 COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 
-# Copy the user information over
-COPY --from=build /etc/passwd /etc/passwd
-COPY --from=build /etc/group /etc/group
+# Copy the app into place
+COPY --from=build /app/deps /
+COPY --from=build /app/bin /
 
 # Use an unprivileged user.
 USER appuser:appuser
