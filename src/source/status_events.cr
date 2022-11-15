@@ -22,11 +22,11 @@ module PlaceOS::Source
     end
 
     def start
-      self.stopped = false
-
       update_values
 
-      SimpleRetry.retry(
+      self.stopped = false
+
+      SimpleRetry.try_to(
         base_interval: 500.milliseconds,
         max_interval: 5.seconds,
         randomise: 500.milliseconds
