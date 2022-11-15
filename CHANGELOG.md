@@ -1,3 +1,9 @@
+## v1.10.0 (2022-11-15)
+
+### Feat
+
+- **status_events**: update values on startup ([#49](https://github.com/PlaceOS/source/pull/49))
+
 ## v1.9.3 (2022-10-25)
 
 ### Fix
