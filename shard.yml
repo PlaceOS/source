@@ -40,9 +40,8 @@ dependencies:
     github: stefanwille/crystal-redis
     version: ~> 2.6
 
-  rethinkdb-orm:
-    github: spider-gazelle/rethinkdb-orm
-    version: ">= 4.0.0"
+  pg-orm:
+    github: spider-gazelle/pg-orm
 
   simple_retry:
     github: spider-gazelle/simple_retry

@@ -11,6 +11,7 @@ module PlaceOS::Source
     end
 
     describe "drivers" do
+      before_each { Model::Driver.clear }
       it "keeps a reference from module_id to driver_id" do
         driver = Model::Generator.driver(module_name: "mock")
         driver.id = "driver-sns"

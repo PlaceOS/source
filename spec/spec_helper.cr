@@ -6,9 +6,10 @@ require "placeos-models/spec/generator"
 require "../src/placeos-source"
 require "../src/source/*"
 
+PgORM::Database.configure { |_| }
 Spec.before_suite do
   PlaceOS::Model::Broker.clear
-  ::Log.setup "*", :trace, PlaceOS::LogBackend.log_backend
+  ::Log.setup "*", :info, PlaceOS::LogBackend.log_backend
 end
 
 def expected_payload(value)

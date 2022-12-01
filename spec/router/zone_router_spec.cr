@@ -13,7 +13,6 @@ module PlaceOS::Source
       router.@event_channel.send(Resource::Event.new(:created, zone))
       router.start
 
-      sleep 0.01
       router.processed.should be_empty
     end
 
