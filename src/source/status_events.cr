@@ -69,7 +69,7 @@ module PlaceOS::Source
               Log.error(exception: error) { {
                 message: "publishing initial state",
                 pattern: pattern,
-                channel: key
+                channel: key,
               } }
             end
           end
