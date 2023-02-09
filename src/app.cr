@@ -65,7 +65,11 @@ module PlaceOS::Source
   influx_host, influx_api_key = INFLUX_HOST, INFLUX_API_KEY
 
   # Add Influx to sources if adequate environmental configuration is present
-  publisher_managers << InfluxManager.new(influx_host, influx_api_key) unless influx_host.nil? || influx_api_key.nil?
+  if influx_host.nil? || influx_api_key.nil?
+    puts "Influx Manager not enabled as no host or key provided"
+  else
+    publisher_managers << InfluxManager.new(influx_host, influx_api_key)
+  end
 
   # Start application manager
   manager = Manager.new(publisher_managers)
