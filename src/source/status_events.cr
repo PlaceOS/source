@@ -21,11 +21,9 @@ module PlaceOS::Source
     def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
     end
 
-    @update_mutex : Mutex = Mutex.new
-
     def start
       self.stopped = false
-      spawn(same_thread: true) { @update_mutex.synchronize { update_values } }
+      spawn(same_thread: true) { update_values }
 
       SimpleRetry.try_to(
         base_interval: 500.milliseconds,
@@ -65,7 +63,15 @@ module PlaceOS::Source
           store = PlaceOS::Driver::RedisStorage.new(mod.id.to_s)
           store.each do |key, value|
             status_updated += 1_u64
-            handle_pevent(pattern: pattern, channel: key, payload: value)
+            begin
+              handle_pevent(pattern: pattern, channel: key, payload: value)
+            rescue error
+              Log.error(exception: error) { {
+                message: "publishing initial state",
+                pattern: pattern,
+                channel: key
+              } }
+            end
           end
         end
       end
