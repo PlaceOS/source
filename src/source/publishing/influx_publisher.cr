@@ -37,6 +37,9 @@ module PlaceOS::Source
       property value : Array(Hash(String, FieldTypes?))
       property ts_tag_keys : Array(String)?
       property ts_map : Hash(String, String)?
+
+      # allow for a custom timestamp field
+      property timestamp_field : String?
     end
 
     alias Value = FieldTypes | Hash(String, FieldTypes?) | Hash(String, Hash(String, FieldTypes?)) | Array(Hash(String, FieldTypes?)) | CustomMetrics
@@ -173,12 +176,19 @@ module PlaceOS::Source
         next if compacted.empty?
         measurement = default_measurement || data.module_name
 
+        override_timestamp = nil
+        if time_key = raw.timestamp_field
+          if time = fields.delete(time_key).as?(Float64)
+            override_timestamp = Time.from_unix time.to_i64
+          end
+        end
+
         # Must include a `pos_uniq` tag for seperating points
         # as per: https://docs.influxdata.com/influxdb/v2.0/write-data/best-practices/duplicate-points/#add-an-arbitrary-tag
         local_tags = tags.dup
         local_tags["pos_uniq"] = index.to_s
 
-        points << build_custom_point(measurement, data, fields, local_tags, compacted, timestamp, ts_map, raw.ts_tag_keys)
+        points << build_custom_point(measurement, data, fields, local_tags, compacted, override_timestamp || timestamp, ts_map, raw.ts_tag_keys)
       end
 
       points
