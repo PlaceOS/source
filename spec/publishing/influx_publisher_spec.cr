@@ -158,6 +158,7 @@ module PlaceOS::Source
           ts_tags: {
             pos_building: "pack",
           },
+          ts_timestamp: "last_seen",
         }.to_json)
 
         points = InfluxPublisher.transform(message)
@@ -167,7 +168,7 @@ module PlaceOS::Source
 
         point.measurement.should eq "M'Odule"
 
-        point.timestamp.should eq Time::UNIX_EPOCH
+        point.timestamp.not_nil!.to_unix.should eq 1601555879_i64
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
@@ -193,7 +194,6 @@ module PlaceOS::Source
           "lat"               => 25.20090608906493,
           "mac"               => "66e0fd1279ce",
           "variance"          => 4.5194575835650745,
-          "last_seen"         => 1601555879,
           "building"          => "zone-EmWLJNm0i~6",
           "level"             => "zone-Epaq-dE1DaH",
           "map_width"         => 1234.2,
