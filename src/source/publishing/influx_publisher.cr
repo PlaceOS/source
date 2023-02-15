@@ -39,7 +39,7 @@ module PlaceOS::Source
       property ts_map : Hash(String, String)?
 
       # allow for a custom timestamp field
-      property timestamp_field : String?
+      property ts_timestamp : String?
     end
 
     alias Value = FieldTypes | Hash(String, FieldTypes?) | Hash(String, Hash(String, FieldTypes?)) | Array(Hash(String, FieldTypes?)) | CustomMetrics
@@ -177,8 +177,8 @@ module PlaceOS::Source
         measurement = default_measurement || data.module_name
 
         override_timestamp = nil
-        if time_key = raw.timestamp_field
-          if time = fields.delete(time_key).as?(Float64)
+        if time_key = raw.ts_timestamp
+          if time = compacted.delete(time_key).as?(Float64)
             override_timestamp = Time.unix time.to_i64
           end
         end
