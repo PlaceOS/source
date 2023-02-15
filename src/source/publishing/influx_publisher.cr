@@ -179,7 +179,7 @@ module PlaceOS::Source
         override_timestamp = nil
         if time_key = raw.timestamp_field
           if time = fields.delete(time_key).as?(Float64)
-            override_timestamp = Time.from_unix time.to_i64
+            override_timestamp = Time.unix time.to_i64
           end
         end
 
