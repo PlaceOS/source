@@ -1,3 +1,15 @@
+## v1.11.0 (2023-02-15)
+
+### Feat
+
+- **influx_publisher**: allow overriding the timestamp ([#53](https://github.com/PlaceOS/source/pull/53))
+
+## v1.10.1 (2023-02-09)
+
+### Fix
+
+- **status_events**: handle errors on initial sync ([#52](https://github.com/PlaceOS/source/pull/52))
+
 ## v1.10.0 (2022-11-15)
 
 ### Feat
