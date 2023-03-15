@@ -24,10 +24,12 @@ x-mqtt-client-env: &mqtt-client-env
 x-redis-client-env: &redis-client-env
   REDIS_URL: ${REDIS_URL:-redis://redis:6379}
 
-x-rethinkdb-client-env: &rethinkdb-client-env
-  RETHINKDB_HOST: ${RETHINKDB_HOST:-rethink}
-  RETHINKDB_PORT: ${RETHINKDB_PORT:-28015}
-  RETHINKDB_DB: ${RETHINKDB_DB:-place_development}
+x-postgresdb-client-env: &postgresdb-client-env
+  PG_HOST: ${PG_HOST:-postgres}
+  PG_PORT: ${PG_PORT:-5432}
+  PG_DB: ${PG_DB:-place_development}
+  PG_USER: ${PG_USER:-postgres}
+  PG_PASSWORD: ${PG_PASSWORD:-password}
 
 services:
   test:
@@ -42,7 +44,8 @@ services:
     depends_on:
       - mqtt
       - redis
-      - rethink
+      - migrator
+      - postgres
       - influxdb
     security_opt:
       - seccomp:unconfined
@@ -55,7 +58,7 @@ services:
       << : *influxdb-client-env
       << : *mqtt-client-env
       << : *redis-client-env
-      << : *rethinkdb-client-env
+      << : *postgresdb-client-env
       # Environment
       << : *deployment-env
 
@@ -87,9 +90,27 @@ services:
     environment:
       TZ: $TZ
 
-  rethink:
-    image: rethinkdb:${RETHINKDB_VERSION:-2.4}
-    restart: always
-    hostname: rethink
+  postgres:
+    hostname: postgres
+    image: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
     environment:
-      TZ: $TZ
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: place_development
+    ports:
+      - 5432:5432
+  migrator:
+    build:
+      context: ${PWD}/spec/migration
+    container_name: migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GITHUB_ACTION: ${GITHUB_ACTION:-}
+      PG_DATABASE_URL: ${PG_DATABASE_URL:-postgresql://postgres:password@postgres:5432/place_development}
