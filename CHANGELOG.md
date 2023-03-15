@@ -1,3 +1,9 @@
+## v1.11.1 (2023-03-15)
+
+### Refactor
+
+- migrate to postgres ([#51](https://github.com/PlaceOS/source/pull/51))
+
 ## v1.11.0 (2023-02-15)
 
 ### Feat
