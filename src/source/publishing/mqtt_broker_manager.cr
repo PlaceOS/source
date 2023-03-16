@@ -104,7 +104,7 @@ module PlaceOS::Source
 
     # Synchronized read access
     #
-    private def read_publishers
+    private def read_publishers(&)
       Log.trace { "waiting to read publishers" }
       publishers_lock.read do
         Log.trace { "reading publishers" }
@@ -114,7 +114,7 @@ module PlaceOS::Source
 
     # Synchronized write access
     #
-    private def write_publishers
+    private def write_publishers(&)
       Log.trace { "waiting to write publishers" }
       publishers_lock.write do
         Log.trace { "writing publishers" }

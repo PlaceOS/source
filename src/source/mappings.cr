@@ -199,14 +199,14 @@ module PlaceOS::Source
     private getter mappings_lock : RWLock = RWLock.new
 
     # Synchronized read access to `Mappings`
-    def read
+    def read(&)
       mappings_lock.read do
         yield @state
       end
     end
 
     # Synchronized write access to `Mappings`
-    def write
+    def write(&)
       mappings_lock.write do
         v = yield @state
         Log.trace { {

@@ -102,7 +102,7 @@ module PlaceOS::Source
     end
 
     protected def publish(message : Message)
-      if (key = MqttPublisher.generate_key(message.data))
+      if key = MqttPublisher.generate_key(message.data)
         # Sanitize the message payload according the Broker's filters
         payload = broker_lock.read do
           MqttPublisher.payload(message.payload, broker)

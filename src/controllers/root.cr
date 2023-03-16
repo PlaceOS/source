@@ -33,7 +33,7 @@ module PlaceOS::Source::Api
       ).then(&.all?).get
     end
 
-    private def self.check_resource?(resource)
+    private def self.check_resource?(resource, &)
       Log.trace { "healthchecking #{resource}" }
       !!yield
     rescue exception
