@@ -103,7 +103,7 @@ shards:
 
   hound-dog:
     git: https://github.com/place-labs/hound-dog.git
-    version: 2.9.0
+    version: 2.9.1
 
   http-params-serializable:
     git: https://github.com/place-labs/http-params-serializable.git
@@ -215,7 +215,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.2.0
+    version: 9.3.1
 
   placeos-resource:
     git: https://github.com/place-labs/resource.git
