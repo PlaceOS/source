@@ -43,11 +43,11 @@ shards:
 
   csuuid:
     git: https://github.com/wyhaines/csuuid.cr.git
-    version: 1.0.0+git.commit.812ee5e1252b27ee2895ec7897094cde3e4a5dc2
+    version: 1.0.0+git.commit.41710010d5b8be818b1ca7b84ef412348e1912bd
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
-    version: 0.11.0
+    version: 0.12.0
 
   debug:
     git: https://github.com/sija/debug.cr.git
@@ -71,7 +71,7 @@ shards:
 
   eventbus:
     git: https://github.com/spider-gazelle/eventbus.git
-    version: 0.9.9+git.commit.1f0e2524e766b10d9dc72705fa6578858e8e0b1b
+    version: 0.9.9+git.commit.8572cf71937680e38df4652fe886e4383b20e4f1
 
   exception_page:
     git: https://github.com/crystal-loot/exception_page.git
@@ -99,7 +99,7 @@ shards:
 
   hot_topic:
     git: https://github.com/jgaskins/hot_topic.git
-    version: 0.1.0+git.commit.c4577d949221d535f29162343bf503b578308954
+    version: 0.1.0+git.commit.3c901e77b6e000930398738260a2944b6f5785dc
 
   hound-dog:
     git: https://github.com/place-labs/hound-dog.git
@@ -151,7 +151,7 @@ shards:
 
   office365:
     git: https://github.com/placeos/office365.git
-    version: 1.19.0
+    version: 1.20.1
 
   open_api:
     git: https://github.com/elbywan/open_api.cr.git
@@ -191,15 +191,15 @@ shards:
 
   pg:
     git: https://github.com/will/crystal-pg.git
-    version: 0.26.0
+    version: 0.27.0
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 1.0.0+git.commit.6bbddb37fc24ce3253937b54f12fe86882b83e14
+    version: 1.0.0+git.commit.d9b9e900ea531fb2920962d72762de6120325892
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.17.0
+    version: 4.18.0
 
   placeos-core-client:
     git: https://github.com/placeos/core-client.git
@@ -207,7 +207,7 @@ shards:
 
   placeos-driver:
     git: https://github.com/placeos/driver.git
-    version: 6.8.5
+    version: 6.8.6
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -215,7 +215,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.4.0
+    version: 9.12.0
 
   placeos-resource:
     git: https://github.com/place-labs/resource.git
