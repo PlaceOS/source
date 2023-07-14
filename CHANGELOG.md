@@ -1,3 +1,9 @@
+## v1.12.3 (2023-07-14)
+
+### Fix
+
+- **resource**: missing change events
+
 ## v1.12.2 (2023-07-04)
 
 ### Fix
