@@ -1,3 +1,9 @@
+## v1.12.5 (2023-07-24)
+
+### Fix
+
+- **status_events**: update to a lazy model loading method
+
 ## v1.12.4 (2023-07-14)
 
 ### Fix
