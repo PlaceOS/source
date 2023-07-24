@@ -56,7 +56,7 @@ module PlaceOS::Source
       mods_mapped = 0_u64
       status_updated = 0_u64
       pattern = "initial_sync"
-      PlaceOS::Model::Module.all.in_groups_of(64, reuse: true) do |modules|
+      PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
         modules.each do |mod|
           break unless mod
           mods_mapped += 1_u64
