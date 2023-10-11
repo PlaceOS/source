@@ -1,3 +1,9 @@
+## v1.12.6 (2023-10-11)
+
+### Fix
+
+- **root**: pg healthcheck with aurora db
+
 ## v1.12.5 (2023-07-24)
 
 ### Fix
