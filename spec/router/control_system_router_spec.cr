@@ -23,6 +23,11 @@ module PlaceOS::Source
   end
 
   describe Router::ControlSystem do
+    Spec.before_each {
+      Model::ControlSystem.clear
+      Model::Broker.clear
+      Model::Driver.clear
+    }
     it "system_modules" do
       cs = Model::Generator.control_system
       cs.id = "cs-1245"

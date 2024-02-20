@@ -64,6 +64,14 @@ module PlaceOS::Source
           store.each do |key, value|
             status_updated += 1_u64
             begin
+              if key.split('/').size < 3
+                Log.warn { {
+                  message: "Channel missing module information. Skipping redis_pevent processing",
+                  pattern: pattern,
+                  channel: key,
+                } }
+                next
+              end
               handle_pevent(pattern: pattern, channel: key, payload: value)
             rescue error
               Log.error(exception: error) { {
@@ -83,7 +91,16 @@ module PlaceOS::Source
     end
 
     protected def handle_pevent(pattern : String, channel : String, payload : String)
-      module_id, status = StatusEvents.parse_channel(channel)
+      begin
+        module_id, status = StatusEvents.parse_channel(channel)
+      rescue error : IndexError
+        Log.error(exception: error) { {
+          message: "Channel missing module information. Skipping redis pevent processing",
+          pattern: pattern,
+          channel: channel,
+        } }
+        return
+      end
       events = mappings.status_events?(module_id, status)
 
       Log.debug { {

@@ -1,3 +1,4 @@
 dependencies:
   ulid:
     github: place-labs/ulid
+    branch: master
