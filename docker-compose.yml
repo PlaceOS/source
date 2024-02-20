@@ -4,27 +4,31 @@ volumes:
   influx-data:
 
 # YAML Anchors
-
-x-deployment-env: &deployment-env
+x-deployment-env:
+  &deployment-env
   ENV: ${ENV:-development}
   SG_ENV: ${SG_ENV:-development}
   TZ: $TZ
 
 x-influxdb-api-key: &influxdb-api-key .env.influxdb
 
-x-influxdb-client-env: &influxdb-client-env
+x-influxdb-client-env:
+  &influxdb-client-env
   INFLUX_BUCKET: ${INFLUX_BUCKET:-place}
   INFLUX_HOST: ${INFLUX_HOST:-http://influxdb:9999}
   INFLUX_ORG: ${INFLUX_ORG:-PlaceOS}
 
-x-mqtt-client-env: &mqtt-client-env
+x-mqtt-client-env:
+  &mqtt-client-env
   MQTT_HOST: ${MQTT_HOST:-mqtt}
   MQTT_PORT: ${MQTT_PORT:-1883}
 
-x-redis-client-env: &redis-client-env
+x-redis-client-env:
+  &redis-client-env
   REDIS_URL: ${REDIS_URL:-redis://redis:6379}
 
-x-postgresdb-client-env: &postgresdb-client-env
+x-postgresdb-client-env:
+  &postgresdb-client-env
   PG_HOST: ${PG_HOST:-postgres}
   PG_PORT: ${PG_PORT:-5432}
   PG_DB: ${PG_DB:-place_development}
@@ -55,12 +59,14 @@ services:
       # Environment
       GITHUB_ACTION: ${GITHUB_ACTION:-}
       # Service Hosts
-      << : *influxdb-client-env
-      << : *mqtt-client-env
-      << : *redis-client-env
-      << : *postgresdb-client-env
-      # Environment
-      << : *deployment-env
+      <<:
+        [
+          *influxdb-client-env,
+          *mqtt-client-env,
+          *redis-client-env,
+          *postgresdb-client-env,
+          *deployment-env
+        ]
 
   influxdb:
     image: influxdb:${INFLUXDB_IMAGE_TAG:-2.0-alpine}
@@ -94,7 +100,7 @@ services:
     hostname: postgres
     image: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 30s
       timeout: 30s
       retries: 3

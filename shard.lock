@@ -291,5 +291,5 @@ shards:
 
   ulid: # Overridden
     git: https://github.com/place-labs/ulid.git
-    version: 0.1.2
+    version: 0.1.3+git.commit.0bb8d5d4bee4168acfac2630ce51ce4706253688
 
