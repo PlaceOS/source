@@ -125,7 +125,7 @@ module PlaceOS::Source
           end
         end
       rescue e : JSON::ParseException
-        Log.info { {message: "not an InfluxDB value type", module_id: data.module_id, module_name: data.module_name, status: data.status} }
+        Log.debug { {message: "not an InfluxDB value type", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         [] of Flux::Point
       end
     end
