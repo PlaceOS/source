@@ -19,7 +19,7 @@ module PlaceOS::Source
   DEFAULT_HOST = ENV["PLACE_SOURCE_HOST"]? || "127.0.0.1"
   DEFAULT_PORT = (ENV["PLACE_SOURCE_PORT"]? || 3000).to_i
 
-  HIERARCHY      = ENV["PLACE_HIERARCHY"]?.try(&.split(' ')) || ["org", "building", "level", "area"]
+  HIERARCHY      = ENV["PLACE_HIERARCHY"]?.try(&.split(' ')) || ["org", "region", "building", "level", "area"]
   MQTT_NAMESPACE = "placeos"
 
   FILTER_SECRET   = ENV["PLACE_FILTER_SECRET"]? || Random::Secure.hex(64)
