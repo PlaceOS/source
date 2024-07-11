@@ -1,3 +1,9 @@
+## v1.12.7 (2024-07-11)
+
+### Fix
+
+- **status_events**: parsing of initial state
+
 ## v1.12.6 (2023-10-11)
 
 ### Fix
