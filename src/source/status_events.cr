@@ -60,24 +60,18 @@ module PlaceOS::Source
         modules.each do |mod|
           break unless mod
           mods_mapped += 1_u64
-          store = PlaceOS::Driver::RedisStorage.new(mod.id.to_s)
+          module_id = mod.id.to_s
+          store = PlaceOS::Driver::RedisStorage.new(module_id)
           store.each do |key, value|
             status_updated += 1_u64
             begin
-              if key.split('/').size < 3
-                Log.warn { {
-                  message: "Channel missing module information. Skipping redis_pevent processing",
-                  pattern: pattern,
-                  channel: key,
-                } }
-                next
-              end
-              handle_pevent(pattern: pattern, channel: key, payload: value)
+              process_pevent(pattern, module_id, key, value)
             rescue error
               Log.error(exception: error) { {
-                message: "publishing initial state",
-                pattern: pattern,
-                channel: key,
+                message:   "publishing initial state",
+                pattern:   pattern,
+                module_id: module_id,
+                status:    key,
               } }
             end
           end
@@ -95,18 +89,24 @@ module PlaceOS::Source
         module_id, status = StatusEvents.parse_channel(channel)
       rescue error : IndexError
         Log.error(exception: error) { {
-          message: "Channel missing module information. Skipping redis pevent processing",
+          message: "Error parsing channel. Skipping redis pevent processing",
           pattern: pattern,
           channel: channel,
         } }
         return
       end
+
+      process_pevent(pattern, module_id, status, payload)
+    end
+
+    protected def process_pevent(pattern : String, module_id : String, status : String, payload : String)
       events = mappings.status_events?(module_id, status)
 
       Log.debug { {
-        message: "redis pevent",
-        pattern: pattern,
-        channel: channel,
+        message:   "redis pevent",
+        pattern:   pattern,
+        module_id: module_id,
+        status:    status,
       } }
 
       events.try &.each do |event|
