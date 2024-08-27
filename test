@@ -5,7 +5,7 @@ set -eu
 # this function is called when Ctrl-C is sent
 function trap_ctrlc ()
 {
-    docker-compose down &> /dev/null
+    docker compose down &> /dev/null
     exit 2
 }
 
@@ -15,18 +15,18 @@ trap "trap_ctrlc" 2
 
 ./scripts/generate-secrets
 
-docker-compose pull -q
+docker compose pull -q
 
-docker-compose up --no-deps --detach influxdb
+docker compose up --no-deps --detach influxdb
 
 ./scripts/init-influxdb
 
-docker-compose build -q
+docker compose build -q
 
 exit_code="0"
 
-docker-compose run --rm test $@ || exit_code="$?"
+docker compose run --rm test $@ || exit_code="$?"
 
-docker-compose down &> /dev/null
+docker compose down &> /dev/null
 
 exit ${exit_code}
