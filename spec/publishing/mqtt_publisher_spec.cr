@@ -57,7 +57,7 @@ module PlaceOS::Source
         status_event = Mappings.new(state).status_events?("mod-1234", "power").not_nil!.first
         key = MqttPublisher.generate_key(status_event)
         key.should_not be_nil
-        key.not_nil!.should eq "placeos/org-donor/state/cards/nek/2042/cs-9445/12345/M'Odule/1/power"
+        key.not_nil!.should eq "placeos/org-donor/state/_/cards/nek/2042/cs-9445/12345/M'Odule/1/power"
       end
 
       it "doesn't create topics for Modules without a top-level scope Zone" do
@@ -89,7 +89,7 @@ module PlaceOS::Source
 
         key = MqttPublisher.generate_key(status_event)
         key.should_not be_nil
-        key.not_nil!.should eq "placeos/org-donor/state/_/nek/2042/cs-9445/12345/M'Odule/1/power"
+        key.not_nil!.should eq "placeos/org-donor/state/_/_/nek/2042/cs-9445/12345/M'Odule/1/power"
       end
 
       it "generates a metadata key" do

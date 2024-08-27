@@ -23,7 +23,7 @@ echo "=== Initialising InfluxDB API"
 # Wait for the service to be available
 wait=0
 max_wait=10
-until [ $wait -eq $max_wait ] || docker-compose exec -T $instance influx ping > /dev/null; do
+until [ $wait -eq $max_wait ] || docker compose exec -T $instance influx ping > /dev/null; do
   sleep $(( wait++ ))
 done
 
@@ -33,7 +33,7 @@ if [ $wait -eq $max_wait ]; then
 fi
 
 # Ensure the bucket in the environment is configured
-docker-compose exec -T "$instance" influx setup --force \
+docker compose exec -T "$instance" influx setup --force \
     --username "${username}" \
     --password "${password}" \
     --org "${org}" \
@@ -42,7 +42,7 @@ docker-compose exec -T "$instance" influx setup --force \
     --retention "${retention}" 2> /dev/null || echo "Already initialised"
 
 # List buckets in the InfluxDB instance
-docker-compose exec -T -e INFLUX_TOKEN="${INFLUX_API_KEY}" "$instance" influx bucket list -o "${org}" -n "${bucket}" --hide-headers > /dev/null
+docker compose exec -T -e INFLUX_TOKEN="${INFLUX_API_KEY}" "$instance" influx bucket list -o "${org}" -n "${bucket}" --hide-headers > /dev/null
 bucket_check_status=$?
 
 if [ $bucket_check_status -eq 0 ]; then

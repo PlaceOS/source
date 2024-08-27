@@ -28,9 +28,36 @@ module PlaceOS::Source
 
       key = MqttPublisher.generate_key(message.data)
 
-      key.should eq "placeos/org-donor/state/cards/nek/2042/cs-9445/12345/M'Odule/1/#{status_key}"
+      key.should eq "placeos/org-donor/state/_/cards/nek/2042/cs-9445/12345/M'Odule/1/#{status_key}"
       message.payload.should eq expected_payload("on")
       events.stop
+    end
+
+    it "overwrites and keep only a single copy of unprocessed event" do
+      module_id = "mod-hello_hello"
+      status_key = "power"
+      mock_mappings_state = mock_state(module_id: module_id)
+
+      mock_mappings = Mappings.new(mock_mappings_state)
+      mock_publisher_manager = MockManager.new
+      managers : Array(PlaceOS::Source::PublisherManager) = [mock_publisher_manager] of PlaceOS::Source::PublisherManager
+
+      events = StatusEvents.new(mock_mappings, managers)
+      spawn(same_thread: true) { events.start }
+
+      sleep 0.1
+
+      Redis.open(url: REDIS_URL) do |client|
+        client.publish("status/#{module_id}/#{status_key}", expected_payload("on"))
+        client.publish("status/#{module_id}/#{status_key}", expected_payload("off"))
+      end
+
+      sleep 0.1
+      mock_publisher_manager.messages.size.should eq(1)
+      message = mock_publisher_manager.messages.first?
+      message.should_not be_nil
+      message = message.not_nil!
+      message.payload.should eq expected_payload("off")
     end
   end
 end

@@ -1,4 +1,19 @@
 Lint/NotNil:
+  Description: Identifies usage of `not_nil!` calls
   Enabled: false
-Style/QueryBoolMethods:
+  Severity: Warning
+
+Naming/BlockParameterName:
+  Description: Disallows non-descriptive block parameter names
   Enabled: false
+  Severity: Convention
+
+Lint/SpecFilename:
+  Description: Enforces spec filenames to have `_spec` suffix
+  Enabled: false
+  Severity: Warning
+
+Naming/AccessorMethodName:
+  Description: Makes sure that accessor methods are named properly
+  Enabled: false
+  Severity: Convention

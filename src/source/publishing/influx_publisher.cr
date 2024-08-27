@@ -195,12 +195,13 @@ module PlaceOS::Source
     end
 
     protected def self.build_custom_point(measurement, data, fields, local_tags, compacted, timestamp, ts_map, ts_tag_keys)
+      measurement_value = measurement
       # Add the fields
       local_fields = fields.dup
       compacted.each do |sub_key, value|
         sub_key = (ts_map[sub_key]? || sub_key).gsub(/\W/, '_')
         if sub_key == "measurement" && value.is_a?(String)
-          measurement = value
+          measurement_value = value
         else
           local_fields[sub_key] = value
         end
@@ -218,7 +219,7 @@ module PlaceOS::Source
       end
 
       Flux::Point.new!(
-        measurement: measurement,
+        measurement: measurement_value,
         timestamp: timestamp,
         tags: local_tags,
         pos_driver: data.driver_id,
