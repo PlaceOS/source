@@ -40,6 +40,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -87,6 +88,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -172,6 +174,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "pack",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -212,6 +215,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "pack",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -287,6 +291,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -327,6 +332,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -394,6 +400,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -480,6 +487,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",
@@ -521,6 +529,7 @@ module PlaceOS::Source
 
         point.tags.should eq({
           "pos_org"      => "org-donor",
+          "pos_region"   => "_",
           "pos_building" => "cards",
           "pos_level"    => "nek",
           "pos_area"     => "2042",

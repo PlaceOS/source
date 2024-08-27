@@ -8,7 +8,6 @@ x-deployment-env:
   &deployment-env
   ENV: ${ENV:-development}
   SG_ENV: ${SG_ENV:-development}
-  TZ: $TZ
 
 x-influxdb-api-key: &influxdb-api-key .env.influxdb
 
@@ -86,15 +85,11 @@ services:
     restart: always
     volumes:
       - ${PWD}/config/mosquitto.conf:/etc/mosquitto/mosquitto.conf
-    environment:
-      TZ: $TZ
 
   redis:
     image: eqalpha/keydb
     restart: always
     hostname: redis
-    environment:
-      TZ: $TZ
 
   postgres:
     hostname: postgres

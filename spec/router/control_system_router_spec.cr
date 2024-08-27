@@ -70,9 +70,10 @@ module PlaceOS::Source
       cs.zones = zones.compact_map &.id
       Router::ControlSystem.system_zones(cs, zones).should eq({
         "org"      => "zone-0",
-        "building" => "zone-1",
-        "level"    => "zone-2",
-        "area"     => "zone-3",
+        "region"   => "zone-1",
+        "building" => "zone-2",
+        "level"    => "zone-3",
+        "area"     => "zone-4",
       })
     end
   end
