@@ -1,3 +1,9 @@
+## v1.12.8 (2024-08-27)
+
+### Fix
+
+- PPT-1503 refactor event processing logic to avoid memory leak ([#55](https://github.com/PlaceOS/source/pull/55))
+
 ## v1.12.7 (2024-07-11)
 
 ### Fix
