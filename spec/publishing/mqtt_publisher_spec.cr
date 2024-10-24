@@ -25,7 +25,7 @@ module PlaceOS::Source
         last_value = nil
 
         client = publisher.new_client
-        spawn(same_thread: true) do
+        spawn do
           client.subscribe(key) do |_key, payload|
             last_value = JSON.parse(String.new(payload))
           end

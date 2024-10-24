@@ -30,8 +30,8 @@ module PlaceOS::Source
 
     def start
       self.stopped = false
-      spawn(same_thread: true) { update_values }
-      spawn(same_thread: true) { process_events }
+      spawn { update_values }
+      spawn { process_events }
 
       SimpleRetry.try_to(
         base_interval: 500.milliseconds,
@@ -112,7 +112,7 @@ module PlaceOS::Source
         break if stopped?
         task = synchronize { event_container.shift? }
         unless task
-          sleep 0.1
+          sleep 100.milliseconds
           next
         end
         key = task.first

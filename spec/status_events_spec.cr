@@ -12,7 +12,7 @@ module PlaceOS::Source
       managers : Array(PlaceOS::Source::PublisherManager) = [mock_publisher_manager] of PlaceOS::Source::PublisherManager
 
       events = StatusEvents.new(mock_mappings, managers)
-      spawn(same_thread: true) { events.start }
+      spawn { events.start }
 
       sleep 0.1
 
@@ -43,7 +43,7 @@ module PlaceOS::Source
       managers : Array(PlaceOS::Source::PublisherManager) = [mock_publisher_manager] of PlaceOS::Source::PublisherManager
 
       events = StatusEvents.new(mock_mappings, managers)
-      spawn(same_thread: true) { events.start }
+      spawn { events.start }
 
       sleep 0.1
 

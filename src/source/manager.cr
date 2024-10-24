@@ -54,7 +54,7 @@ module PlaceOS::Source
       driver_router.start
 
       Log.info { "listening for Module state events" }
-      spawn(same_thread: true) { status_events.start }
+      spawn { status_events.start }
 
       Fiber.yield
     end
