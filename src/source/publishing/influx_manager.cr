@@ -20,7 +20,7 @@ module PlaceOS::Source
       @influx_host : String = INFLUX_HOST || abort("INFLUX_HOST unset"),
       @influx_api_key : String = INFLUX_API_KEY || abort("INFLUX_API_KEY unset"),
       @influx_org : String = INFLUX_ORG,
-      @influx_bucket : String = INFLUX_BUCKET
+      @influx_bucket : String = INFLUX_BUCKET,
     )
       client = Flux::Client.new(influx_host, influx_api_key, influx_org)
       @publisher = InfluxPublisher.new(client, influx_bucket)

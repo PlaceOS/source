@@ -61,7 +61,7 @@ module PlaceOS::Source
     area_id = "2042",
     level_id = "nek",
     building_id = "cards",
-    org_id = "org-donor"
+    org_id = "org-donor",
   )
     state = Mappings::State.new
     state.system_modules[module_id] = [{name: module_name, control_system_id: control_system_id, index: index}]
