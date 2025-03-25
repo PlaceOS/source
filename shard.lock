@@ -19,7 +19,7 @@ shards:
 
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
-    version: 1.2.2
+    version: 1.2.4
 
   bindata:
     git: https://github.com/spider-gazelle/bindata.git
@@ -75,7 +75,7 @@ shards:
 
   flux:
     git: https://github.com/place-labs/flux.git
-    version: 3.0.1
+    version: 3.0.2
 
   future:
     git: https://github.com/crystal-community/future.cr.git
@@ -147,7 +147,7 @@ shards:
 
   pars:
     git: https://github.com/spider-gazelle/pars.git
-    version: 1.1.0
+    version: 1.2.0
 
   pegmatite:
     git: https://github.com/jemc/crystal-pegmatite.git
