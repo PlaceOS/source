@@ -21,7 +21,7 @@ module PlaceOS::Source
 
     def initialize(
       @publisher_managers : Array(PublisherManager) = [] of PublisherManager,
-      @mappings : Mappings = Mappings.new
+      @mappings : Mappings = Mappings.new,
     )
       @control_system_router = Router::ControlSystem.new(mappings, publisher_managers)
       @driver_router = Router::Driver.new(mappings, publisher_managers)
