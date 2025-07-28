@@ -68,11 +68,7 @@ module PlaceOS::Source
 
   publisher_managers = [] of PublisherManager
 
-  if PlaceOS::Model::Broker.count > 0
-    publisher_managers << MqttBrokerManager.new
-  else
-    puts "skipping Mqtt Broker\n"
-  end
+  publisher_managers << MqttBrokerManager.new
 
   influx_host, influx_api_key = INFLUX_HOST, INFLUX_API_KEY
 
