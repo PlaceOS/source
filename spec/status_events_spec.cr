@@ -14,13 +14,13 @@ module PlaceOS::Source
       events = StatusEvents.new(mock_mappings, managers)
       spawn { events.start }
 
-      sleep 0.1
+      sleep 1000.milliseconds
 
       Redis.open(url: REDIS_URL) do |client|
         client.publish("status/#{module_id}/#{status_key}", expected_payload("on"))
       end
 
-      sleep 0.1
+      sleep 1000.milliseconds
 
       message = mock_publisher_manager.messages.first?
       message.should_not be_nil
@@ -45,14 +45,14 @@ module PlaceOS::Source
       events = StatusEvents.new(mock_mappings, managers)
       spawn { events.start }
 
-      sleep 0.1
+      sleep 1000.milliseconds
 
       Redis.open(url: REDIS_URL) do |client|
         client.publish("status/#{module_id}/#{status_key}", expected_payload("on"))
         client.publish("status/#{module_id}/#{status_key}", expected_payload("off"))
       end
 
-      sleep 0.1
+      sleep 100.milliseconds
       mock_publisher_manager.messages.size.should eq(1)
       message = mock_publisher_manager.messages.first?
       message.should_not be_nil

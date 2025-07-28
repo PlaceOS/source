@@ -58,6 +58,14 @@ module PlaceOS::Source
     end
   end
 
+  # Configure the database connection. First check if PG_DATABASE_URL environment variable
+  # is set. If not, assume database configuration are set via individual environment variables
+  if pg_url = ENV["PG_DATABASE_URL"]?
+    PgORM::Database.parse(pg_url)
+  else
+    PgORM::Database.configure { |_| }
+  end
+
   publisher_managers = [] of PublisherManager
 
   publisher_managers << MqttBrokerManager.new
@@ -69,14 +77,6 @@ module PlaceOS::Source
     puts "Influx Manager not enabled as no host or key provided"
   else
     publisher_managers << InfluxManager.new(influx_host, influx_api_key)
-  end
-
-  # Configure the database connection. First check if PG_DATABASE_URL environment variable
-  # is set. If not, assume database configuration are set via individual environment variables
-  if pg_url = ENV["PG_DATABASE_URL"]?
-    PgORM::Database.parse(pg_url)
-  else
-    PgORM::Database.configure { |_| }
   end
 
   # Start application manager
