@@ -1,3 +1,9 @@
+## v1.12.9 (2025-08-04)
+
+### Refactor
+
+- App on startup to conditionally start mqtt publisher ([#57](https://github.com/PlaceOS/source/pull/57))
+
 ## v1.12.8 (2024-08-27)
 
 ### Fix
