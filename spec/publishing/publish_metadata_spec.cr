@@ -37,7 +37,7 @@ module PlaceOS::Source
       mock = MockModel.new(id: "hello", some_data: "edkh")
       router.publish_metadata(zone, mock)
 
-      sleep 0.1
+      sleep 1000.milliseconds
 
       router.@publisher_managers.first.messages.should be_empty
     end
@@ -52,7 +52,7 @@ module PlaceOS::Source
       router = Dummy.new
       router.publish_metadata(zone, mock)
 
-      sleep 0.1
+      sleep 1000.milliseconds
 
       message = router.@publisher_managers.first.messages.first?
       message.should_not be_nil
