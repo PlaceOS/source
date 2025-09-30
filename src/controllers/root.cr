@@ -1,3 +1,4 @@
+require "http/client"
 require "./application"
 
 require "placeos-models/version"
@@ -29,6 +30,9 @@ module PlaceOS::Source::Api
         },
         Promise.defer {
           check_resource?("postgres") { pg_healthcheck }
+        },
+        Promise.defer {
+          check_resource?("influx") { influx_healthcheck }
         },
       ).then(&.all?).get
     end
@@ -63,6 +67,22 @@ module PlaceOS::Source::Api
         else
           "#{url}?timeout=#{timeout}"
         end
+      end
+    end
+
+    def self.influx_healthcheck : Bool
+      influx_host = INFLUX_HOST
+      return false if influx_host.nil?
+
+      begin
+        HTTP::Client.new(URI.parse(influx_host)) do |client|
+          client.connect_timeout = 5.seconds
+          client.read_timeout = 5.seconds
+          response = client.get("/health")
+          response.status_code == 200
+        end
+      rescue
+        false
       end
     end
 
