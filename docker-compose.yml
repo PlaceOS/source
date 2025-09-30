@@ -14,7 +14,7 @@ x-influxdb-api-key: &influxdb-api-key .env.influxdb
 x-influxdb-client-env:
   &influxdb-client-env
   INFLUX_BUCKET: ${INFLUX_BUCKET:-place}
-  INFLUX_HOST: ${INFLUX_HOST:-http://influxdb:9999}
+  INFLUX_HOST: ${INFLUX_HOST:-http://influxdb:8086}
   INFLUX_ORG: ${INFLUX_ORG:-PlaceOS}
 
 x-mqtt-client-env:
