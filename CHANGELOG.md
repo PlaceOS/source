@@ -1,3 +1,9 @@
+## v1.13.0 (2025-09-30)
+
+### Feat
+
+- [PPT-2230] Added influx health check ([#58](https://github.com/PlaceOS/source/pull/58))
+
 ## v1.12.9 (2025-08-04)
 
 ### Refactor
