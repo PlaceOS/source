@@ -106,8 +106,7 @@ module PlaceOS::Source::Api
       HTTP::Client.new(URI.parse(influx_host)) do |client|
         client.connect_timeout = 5.seconds
         client.read_timeout = 5.seconds
-        response = client.get("/health")
-        response.status_code == 200
+        client.get("/health").success?
       end
     end
 
