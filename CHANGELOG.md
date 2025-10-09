@@ -1,3 +1,9 @@
+## v1.13.1 (2025-10-09)
+
+### Refactor
+
+-  root GET endpoint to return services status + error details ([#59](https://github.com/PlaceOS/source/pull/59))
+
 ## v1.13.0 (2025-09-30)
 
 ### Feat
