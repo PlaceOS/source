@@ -1,3 +1,9 @@
+## v1.14.0 (2025-10-30)
+
+### Feat
+
+- improve status publishing
+
 ## v1.13.1 (2025-10-09)
 
 ### Refactor
