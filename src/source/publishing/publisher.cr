@@ -7,7 +7,8 @@ module PlaceOS::Source
     record(
       Message,
       data : Mappings::Data,
-      payload : String?
+      payload : String?,
+      timestamp : Time
     )
 
     getter message_queue : Channel(Message) = Channel(Message).new
@@ -20,10 +21,6 @@ module PlaceOS::Source
 
     def stop
       message_queue.close
-    end
-
-    def self.timestamp
-      Time.utc
     end
 
     private def consume_messages

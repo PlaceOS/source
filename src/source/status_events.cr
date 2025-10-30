@@ -24,11 +24,11 @@ module PlaceOS::Source
     private property? stopped : Bool = true
 
     private getter sync_lock = Mutex.new(:reentrant)
-    private getter event_available = Channel(Nil).new(1)
 
     alias EventKey = NamedTuple(source: Symbol, mod_id: String, status: String)
-    alias EventValue = NamedTuple(pattern: String, payload: String)
+    alias EventValue = NamedTuple(pattern: String, payload: String, timestamp: Time)
     private getter event_container = Hash(EventKey, EventValue).new
+    private getter event_queue = [] of EventKey
 
     def initialize(@mappings : Mappings, @publisher_managers : Array(PublisherManager))
     end
@@ -71,21 +71,23 @@ module PlaceOS::Source
       pattern = "initial_sync"
       PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
         modules.each do |mod|
-          break unless mod
+          next unless mod
           mods_mapped += 1_u64
           module_id = mod.id.to_s
           store = PlaceOS::Driver::RedisStorage.new(module_id)
           store.each do |key, value|
             status_updated += 1_u64
-            add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value})
+            add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
+          end
 
-            # Backpressure if event container is growing too fast
-            if event_container.size >= MAX_CONTAINER_SIZE / 2
-              until event_container.size < MAX_CONTAINER_SIZE / 4
-                sleep 10.milliseconds
-              end
+          # Backpressure if event container is growing too fast
+          if event_container.size >= MAX_CONTAINER_SIZE / 2
+            until event_container.size < MAX_CONTAINER_SIZE / 4
+              sleep 10.milliseconds
             end
           end
+        rescue error
+          Log.warn(exception: error) { "error syncing #{mod.try(&.id)}" }
         end
       end
       Log.info { {
@@ -106,33 +108,29 @@ module PlaceOS::Source
         } }
         return
       end
-      add_event({source: :redis, mod_id: module_id, status: status}, {pattern: pattern, payload: payload})
+      add_event({source: :redis, mod_id: module_id, status: status}, {pattern: pattern, payload: payload, timestamp: Time.utc})
     end
 
     private def add_event(key : EventKey, value : EventValue)
       synchronize do
-        if event_container.size >= MAX_CONTAINER_SIZE
-          Log.warn { "Event container full! Possible processing backlog. Skipping #{key[:source]} - #{key[:mod_id]}" }
-          return
-        end
+        has_key = event_container.has_key?(key)
         event_container[key] = value
-        event_available.send(nil) if event_container.size == 1
+        event_queue << key unless has_key
       end
     end
 
     protected def process_events
       until stopped?
-        batch = build_batch
-        process_batch(batch) unless batch.empty?
-
-        if event_container.empty?
-          select
-          when event_available.receive?
-          when timeout(PROCESSING_INTERVAL)
+        begin
+          batch = build_batch
+          if batch.empty?
+            sleep PROCESSING_INTERVAL
+          else
+            process_batch(batch)
+            Fiber.yield
           end
-        elsif event_container.size >= CONTAINER_WARNING_THRESHOLD
-          sleep PROCESSING_INTERVAL / 10
-        else
+        rescue error
+          Log.error(exception: error) { "error processing events" }
           sleep PROCESSING_INTERVAL
         end
       end
@@ -140,20 +138,20 @@ module PlaceOS::Source
 
     private def build_batch : Array({EventKey, EventValue})
       synchronize do
-        keys = event_container.keys.first(BATCH_SIZE)
-        keys.map { |key| {key, event_container.delete(key).not_nil!} }
+        keys = event_queue.shift(BATCH_SIZE)
+        keys.map { |key| {key, event_container.delete(key).as(EventValue)} }
       end
     end
 
     private def process_batch(batch)
       batch.each do |(key, value)|
-        process_pevent(value[:pattern], key[:mod_id], key[:status], value[:payload])
+        process_pevent(value[:pattern], key[:mod_id], key[:status], value[:payload], value[:timestamp])
       end
     rescue error
       Log.error(exception: error) { "Error processing event batch" }
     end
 
-    protected def process_pevent(pattern : String, module_id : String, status : String, payload : String)
+    protected def process_pevent(pattern : String, module_id : String, status : String, payload : String, timestamp : Time)
       events = mappings.status_events?(module_id, status)
 
       Log.debug { {
@@ -164,7 +162,7 @@ module PlaceOS::Source
       } }
 
       events.try &.each do |event|
-        message = Publisher::Message.new(event, payload)
+        message = Publisher::Message.new(event, payload, timestamp)
         publisher_managers.each do |manager|
           Log.trace { "broadcasting message to #{manager.class}" }
           manager.broadcast(message)

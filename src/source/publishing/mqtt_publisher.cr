@@ -25,7 +25,7 @@ module PlaceOS::Source
       end
     end
 
-    def self.payload(value, broker : PlaceOS::Model::Broker?, timestamp : Time = self.timestamp)
+    def self.payload(value, broker : PlaceOS::Model::Broker?, timestamp : Time)
       value = broker.sanitize(value) unless broker.nil? || value.nil?
       Event.new(value, timestamp).to_json
     end
@@ -105,7 +105,7 @@ module PlaceOS::Source
       if key = MqttPublisher.generate_key(message.data)
         # Sanitize the message payload according the Broker's filters
         payload = broker_lock.read do
-          MqttPublisher.payload(message.payload, broker)
+          MqttPublisher.payload(message.payload, broker, message.timestamp)
         end
 
         retain = case message.data

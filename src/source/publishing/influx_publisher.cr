@@ -64,7 +64,8 @@ module PlaceOS::Source
 
     # Generate an InfluxDB Point from an mqtt key + payload
     #
-    def self.transform(message : Publisher::Message, timestamp : Time = Publisher.timestamp) : Array(Flux::Point)
+    def self.transform(message : Publisher::Message) : Array(Flux::Point)
+      timestamp = message.timestamp
       data = message.data
 
       # Only Module status events are persisted

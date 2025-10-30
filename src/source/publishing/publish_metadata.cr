@@ -16,6 +16,7 @@ module PlaceOS::Source
         message = Publisher::Message.new(
           data: Mappings::Metadata.new(model.id.as(String)),
           payload: model.destroyed? ? nil : model.to_json,
+          timestamp: Time.utc
         )
 
         # Fire off broadcast

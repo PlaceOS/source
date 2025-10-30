@@ -32,7 +32,7 @@ module PlaceOS::Source
         end
 
         sleep 100.milliseconds
-        publisher.publish(Publisher::Message.new(status_event, "true"))
+        publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
         sleep 100.milliseconds
         client.unsubscribe(key)
 
@@ -101,11 +101,11 @@ module PlaceOS::Source
 
     describe "payloads" do
       it "non-empty" do
-        JSON.parse(MqttPublisher.payload(%("hello"), nil))["value"].raw.should eq "hello"
+        JSON.parse(MqttPublisher.payload(%("hello"), nil, Time.utc))["value"].raw.should eq "hello"
       end
 
       it "empty payload metadata" do
-        JSON.parse(MqttPublisher.payload(nil, nil))["value"].raw.should be_nil
+        JSON.parse(MqttPublisher.payload(nil, nil, Time.utc))["value"].raw.should be_nil
       end
     end
   end

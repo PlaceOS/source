@@ -8,6 +8,7 @@ module PlaceOS::Source
         message = Publisher::Message.new(
           data: Mappings::Metadata.new("some-model-id"),
           payload: nil,
+          timestamp: Time.utc
         )
         points = InfluxPublisher.transform(message)
         points.empty?.should be_true
@@ -28,7 +29,7 @@ module PlaceOS::Source
 
         status_event = Mappings.new(state).status_events?("mod-1234", "power").not_nil!.first
 
-        message = Publisher::Message.new(status_event, "false")
+        message = Publisher::Message.new(status_event, "false", timestamp: Time.utc)
 
         point = InfluxPublisher.transform(message)[0]
         point.should_not be_nil
@@ -76,7 +77,7 @@ module PlaceOS::Source
           temp:  30.5,
           id:    nil,
           other: false,
-        }.to_json)
+        }.to_json, timestamp: Time.utc)
 
         point = InfluxPublisher.transform(message)[0]
         point.should_not be_nil
@@ -161,7 +162,7 @@ module PlaceOS::Source
             pos_building: "pack",
           },
           ts_timestamp: "last_seen",
-        }.to_json)
+        }.to_json, timestamp: Time.utc)
 
         points = InfluxPublisher.transform(message)
         point = points[0]
@@ -278,7 +279,7 @@ module PlaceOS::Source
           "mac"         => "66e0fd1279ce",
           "level"       => "zone_1234",
           "building"    => "zone_1234",
-        }].to_json)
+        }].to_json, timestamp: Time.utc)
 
         points = InfluxPublisher.transform(message)
         point = points[0]
@@ -387,7 +388,7 @@ module PlaceOS::Source
           "map_height"        => 123.8,
           "meraki_floor_id"   => "g_727894289736675",
           "meraki_floor_name" => "BUILDING Name - L2",
-        }.to_json)
+        }.to_json, timestamp: Time.utc)
 
         points = InfluxPublisher.transform(message)
         point = points[0]
@@ -474,7 +475,7 @@ module PlaceOS::Source
             "level"       => "zone_1234",
             "building"    => "zone_1234",
           },
-        }.to_json)
+        }.to_json, timestamp: Time.utc)
 
         points = InfluxPublisher.transform(message)
         point = points[0]
