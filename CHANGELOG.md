@@ -1,3 +1,9 @@
+## v1.15.0 (2025-11-05)
+
+### Feat
+
+- add day of week and time of day to points [PPT-2279] ([#60](https://github.com/PlaceOS/source/pull/60))
+
 ## v1.14.0 (2025-10-30)
 
 ### Feat
