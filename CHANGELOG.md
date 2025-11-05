@@ -1,3 +1,9 @@
+## v1.16.1 (2025-11-05)
+
+### Fix
+
+- influx does support string field values
+
 ## v1.16.0 (2025-11-05)
 
 ### Feat
