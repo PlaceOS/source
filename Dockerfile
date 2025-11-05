@@ -74,6 +74,9 @@ RUN for binary in /app/bin/*; do \
         xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
     done
 
+# Create tmp directory with proper permissions
+RUN rm -rf /tmp && mkdir -p /tmp && chmod 1777 /tmp
+
 # Build a minimal docker image
 FROM scratch
 WORKDIR /
@@ -92,6 +95,9 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # This is required for Timezone support
 COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
+
+# Copy tmp directory
+COPY --from=build /tmp /tmp
 
 # Copy the app into place
 COPY --from=build /app/deps /
