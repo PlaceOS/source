@@ -34,7 +34,7 @@ module PlaceOS::Source
         sleep 100.milliseconds
         publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
         sleep 100.milliseconds
-        client.unsubscribe(key)
+        client.unsubscribe(key) rescue nil
 
         last_value.try(&.[]("value")).should be_true
       end
