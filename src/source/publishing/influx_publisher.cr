@@ -62,6 +62,37 @@ module PlaceOS::Source
       end
     end
 
+    @@building_timezones = {} of String => Time::Location?
+    @@timezone_lock = Mutex.new
+
+    def self.timezone_cache_reset
+      loop do
+        sleep 1.hour
+        @@timezone_lock.synchronize do
+          @@building_timezones = {} of String => Time::Location?
+        end
+      rescue error
+        Log.warn(exception: error) { "error clearing timezone cache" }
+      end
+    end
+
+    def self.timezone_for(building_id : String?) : Time::Location?
+      return nil unless building_id && building_id.presence
+
+      @@timezone_lock.synchronize do
+        if @@building_timezones.has_key?(building_id)
+          return @@building_timezones[building_id]
+        end
+
+        if zone = Model::Zone.find_by?(id: building_id)
+          @@building_timezones[building_id] = zone.timezone
+        end
+      end
+    rescue error
+      Log.warn(exception: error) { "error fetching timezone for zone #{building_id}" }
+      nil
+    end
+
     # Generate an InfluxDB Point from an mqtt key + payload
     #
     def self.transform(message : Publisher::Message) : Array(Flux::Point)
@@ -90,6 +121,12 @@ module PlaceOS::Source
       tags["pos_index"] = data.index.to_i64.to_s
 
       fields = ::Flux::Point::FieldSet.new
+
+      if timezone = timezone_for(data.zone_mapping["building"]?)
+        local_time = timestamp.in(timezone)
+        tags["pos_day_of_week"] = local_time.day_of_week.to_s
+        fields["pos_time_of_day"] = (local_time.hour * 100 + local_time.minute).to_i64
+      end
 
       # https://docs.influxdata.com/influxdb/v2.0/reference/flux/language/lexical-elements/#identifiers
       key = data.status.gsub(/\W/, '_')

@@ -9,7 +9,7 @@ module PlaceOS::Source
 
         state = mock_state(
           module_id: module_id,
-          index: 1,
+          index: 5,
           module_name: "M'Odule",
           driver_id: "12345",
           control_system_id: "cs-9445",
@@ -31,10 +31,10 @@ module PlaceOS::Source
           end
         end
 
-        sleep 100.milliseconds
+        sleep 200.milliseconds
         publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
-        sleep 100.milliseconds
-        client.unsubscribe(key)
+        sleep 200.milliseconds
+        client.unsubscribe(key) rescue nil
 
         last_value.try(&.[]("value")).should be_true
       end

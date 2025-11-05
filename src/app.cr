@@ -85,6 +85,9 @@ module PlaceOS::Source
 
   Manager.instance = manager
 
+  # timezone cache management
+  spawn { PlaceOS::Source::InfluxPublisher.timezone_cache_reset }
+
   # Server Configuration
 
   server = ActionController::Server.new(port, host)
