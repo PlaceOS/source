@@ -1,3 +1,9 @@
+## v1.16.0 (2025-11-05)
+
+### Feat
+
+- ignore string payloads and add region timezones
+
 ## v1.15.0 (2025-11-05)
 
 ### Feat
