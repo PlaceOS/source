@@ -106,9 +106,9 @@ module PlaceOS::Source
         hmac_sha256(match_string)
       end
 
-      # Influx doesn't support `nil` or String values
-      if payload.nil? || payload == "null" || payload.starts_with?('"')
-        Log.debug { {message: "Influx doesn't support nil or string values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
+      # Influx doesn't support `nil`
+      if payload.nil? || payload == "null"
+        Log.debug { {message: "Influx doesn't support nil", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         return [] of Flux::Point
       end
 
