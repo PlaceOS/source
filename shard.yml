@@ -1,5 +1,5 @@
 name: placeos-source
-version: 1.14.0
+version: 1.15.0
 crystal: ~> 1
 authors:
   - Caspian Baska <caspian@place.technology>
