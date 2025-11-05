@@ -106,9 +106,9 @@ module PlaceOS::Source
         hmac_sha256(match_string)
       end
 
-      # Influx doesn't support `nil` values
-      if payload.nil? || payload == "null"
-        Log.debug { {message: "Influx doesn't support nil values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
+      # Influx doesn't support `nil` or String values
+      if payload.nil? || payload == "null" || payload.starts_with?('"')
+        Log.debug { {message: "Influx doesn't support nil or string values", module_id: data.module_id, module_name: data.module_name, status: data.status} }
         return [] of Flux::Point
       end
 
@@ -122,7 +122,7 @@ module PlaceOS::Source
 
       fields = ::Flux::Point::FieldSet.new
 
-      if timezone = timezone_for(data.zone_mapping["building"]?)
+      if timezone = timezone_for(data.zone_mapping["region"]?) || timezone_for(data.zone_mapping["building"]?)
         local_time = timestamp.in(timezone)
         tags["pos_day_of_week"] = local_time.day_of_week.to_s
         fields["pos_time_of_day"] = (local_time.hour * 100 + local_time.minute).to_i64
