@@ -1,3 +1,9 @@
+## v1.17.0 (2025-11-06)
+
+### Feat
+
+- add week_of_year, month_of_year and year fields
+
 ## v1.16.1 (2025-11-05)
 
 ### Fix
