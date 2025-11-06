@@ -106,6 +106,7 @@ module PlaceOS::Source
         hmac_sha256(match_string)
       end
 
+      # NOTE:: we should try and detect unsupport string values to prevent errors
       # Influx doesn't support `nil`
       if payload.nil? || payload == "null"
         Log.debug { {message: "Influx doesn't support nil", module_id: data.module_id, module_name: data.module_name, status: data.status} }
@@ -126,6 +127,10 @@ module PlaceOS::Source
         local_time = timestamp.in(timezone)
         tags["pos_day_of_week"] = local_time.day_of_week.to_s
         fields["pos_time_of_day"] = (local_time.hour * 100 + local_time.minute).to_i64
+        pos_year, pos_week = local_time.calendar_week
+        fields["pos_week_of_year"] = pos_week.to_i64
+        fields["pos_month_of_year"] = local_time.month.to_i64
+        fields["pos_year"] = pos_year.to_i64
       end
 
       # https://docs.influxdata.com/influxdb/v2.0/reference/flux/language/lexical-elements/#identifiers
