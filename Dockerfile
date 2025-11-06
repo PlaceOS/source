@@ -99,6 +99,13 @@ COPY --from=build /usr/share/zoneinfo/ /usr/share/zoneinfo/
 # Copy tmp directory
 COPY --from=build /tmp /tmp
 
+# chmod for setting permissions on /tmp
+COPY --from=build /bin /bin
+COPY --from=build /lib/ld-musl-* /lib/
+RUN chmod -R a+rwX /tmp
+# hadolint ignore=SC2114,DL3059
+RUN rm -rf /bin /lib
+
 # Copy the app into place
 COPY --from=build /app/deps /
 COPY --from=build /app/bin /
