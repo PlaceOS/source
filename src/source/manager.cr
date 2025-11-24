@@ -34,6 +34,7 @@ module PlaceOS::Source
       return if started?
       @started = true
 
+      # Start publisher managers first to establish connections
       Log.info { "registering Publishers" }
       publisher_managers.each(&.start)
 
@@ -52,6 +53,16 @@ module PlaceOS::Source
       # Publish any relevant driver metadata
       Log.info { "starting Driver router" }
       driver_router.start
+
+      # Setup callback for new broker connections to trigger state resync
+      publisher_managers.each do |manager|
+        if manager.is_a?(MqttBrokerManager)
+          manager.on_broker_ready = ->(broker_id : String) {
+            Log.info { "triggering state resync for new Broker<#{broker_id}>" }
+            spawn { status_events.resync_state }
+          }
+        end
+      end
 
       Log.info { "listening for Module state events" }
       spawn { status_events.start }

@@ -11,6 +11,9 @@ module PlaceOS::Source
 
     Log = ::Log.for(self)
 
+    # Callback to trigger state sync when new brokers are added
+    property on_broker_ready : Proc(String, Nil)?
+
     class_getter instance : self { new }
 
     # Broadcast a message to each MQTT Broker
@@ -60,6 +63,12 @@ module PlaceOS::Source
       end
 
       publisher.start
+
+      # Trigger state sync callback if this is a new broker after startup
+      if startup_finished?
+        Log.info { "new broker connected after startup, triggering state sync for Broker<#{broker_id}>" }
+        on_broker_ready.try &.call(broker_id)
+      end
 
       Resource::Result::Success
     end
