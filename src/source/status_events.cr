@@ -22,6 +22,7 @@ module PlaceOS::Source
     private getter publisher_managers : Array(PublisherManager)
 
     private property? stopped : Bool = true
+    private property? initial_sync_complete : Bool = false
 
     private getter sync_lock = Mutex.new(:reentrant)
 
@@ -92,6 +93,46 @@ module PlaceOS::Source
       end
       Log.info { {
         message: "initial status sync complete",
+        modules: mods_mapped.to_s,
+        values:  status_updated.to_s,
+      } }
+      self.initial_sync_complete = true
+    end
+
+    # Trigger a state resync - useful when new brokers are added
+    def resync_state
+      return unless initial_sync_complete?
+
+      Log.info { "resyncing state for new broker connection" }
+
+      mods_mapped = 0_u64
+      status_updated = 0_u64
+      pattern = "broker_resync"
+
+      PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
+        modules.each do |mod|
+          next unless mod
+          mods_mapped += 1_u64
+          module_id = mod.id.to_s
+          store = PlaceOS::Driver::RedisStorage.new(module_id)
+          store.each do |key, value|
+            status_updated += 1_u64
+            add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
+          end
+
+          # Backpressure if event container is growing too fast
+          if event_container.size >= MAX_CONTAINER_SIZE / 2
+            until event_container.size < MAX_CONTAINER_SIZE / 4
+              sleep 10.milliseconds
+            end
+          end
+        rescue error
+          Log.warn(exception: error) { "error resyncing #{mod.try(&.id)}" }
+        end
+      end
+
+      Log.info { {
+        message: "state resync complete",
         modules: mods_mapped.to_s,
         values:  status_updated.to_s,
       } }

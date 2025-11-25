@@ -85,6 +85,9 @@ module PlaceOS::Source
         password: broker.password,
       )
 
+      # Small delay to ensure connection is fully established
+      sleep 100.milliseconds
+
       close_channel = Channel(Nil).new(1)
 
       repeating_task = Tasker.every((keep_alive // 3).seconds) do
