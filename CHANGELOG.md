@@ -1,3 +1,9 @@
+## v1.17.1 (2025-11-25)
+
+### Refactor
+
+- [PPT-2296] Source should sync state when new brokers are added ([#62](https://github.com/PlaceOS/source/pull/62))
+
 ## v1.17.0 (2025-11-06)
 
 ### Feat
