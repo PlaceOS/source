@@ -111,20 +111,13 @@ module PlaceOS::Source
           MqttPublisher.payload(message.payload, broker, message.timestamp)
         end
 
-        retain = case message.data
-                 # Publish event to the 'status' topic
-                 in Mappings::Metadata then false
-                   # Update persistent 'metadata' topic (includes deleting)
-                 in Mappings::Status then true
-                 end
-
-        Log.trace { {message: "writing to MQTT", key: key, retain: retain} }
+        Log.trace { {message: "writing to MQTT", key: key} }
 
         Retriable.retry(max_attempts: 20, on: IO::Error | MQTT::Error, on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
           Log.error(exception: e) { "MQTT connection error, reconnecting..." }
           new_client
         }) do
-          client.publish(topic: key, payload: payload, retain: retain)
+          client.publish(topic: key, payload: payload, retain: true)
         end
       end
     rescue e
