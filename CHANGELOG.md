@@ -1,3 +1,9 @@
+## v1.17.2 (2025-12-03)
+
+### Fix
+
+- retain all mqtt messages
+
 ## v1.17.1 (2025-11-25)
 
 ### Refactor
