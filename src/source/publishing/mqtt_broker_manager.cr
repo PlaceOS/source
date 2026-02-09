@@ -131,7 +131,7 @@ module PlaceOS::Source
       end
     end
 
-    # Safe to update iff fields in SAFE_ATTRIBUTES changed
+    # Safe to update if fields in SAFE_ATTRIBUTES changed
     #
     def self.safe_update?(model : Model::Broker)
       # Take the union of the changed fields and the safe fields

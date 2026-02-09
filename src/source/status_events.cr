@@ -12,7 +12,7 @@ module PlaceOS::Source
     Log = ::Log.for(self)
 
     STATUS_CHANNEL_PATTERN      = "status/#{Model::Module.table_name}-*"
-    MAX_CONTAINER_SIZE          = 50_000
+    MAX_CONTAINER_SIZE          = 40_000
     BATCH_SIZE                  =    100
     PROCESSING_INTERVAL         = 100.milliseconds
     CONTAINER_WARNING_THRESHOLD = MAX_CONTAINER_SIZE * 0.8
@@ -66,11 +66,33 @@ module PlaceOS::Source
       redis.close
     end
 
+    def paginate_modules(&)
+      batch_size = 64
+      last_created_at = Time.unix(0)
+      last_id = ""
+
+      loop do
+        modules = PlaceOS::Model::Module
+          .where("created_at > ? OR (created_at = ? AND id > ?)", last_created_at, last_created_at, last_id)
+          .order(created_at: :asc, id: :asc)
+          .limit(batch_size)
+          .to_a
+
+        # process
+        break if modules.empty?
+        yield modules
+        break if modules.size < batch_size
+
+        last_created_at = modules.last.created_at
+        last_id = modules.last.id
+      end
+    end
+
     def update_values
       mods_mapped = 0_u64
       status_updated = 0_u64
       pattern = "initial_sync"
-      PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
+      paginate_modules do |modules|
         modules.each do |mod|
           next unless mod
           mods_mapped += 1_u64
@@ -109,7 +131,7 @@ module PlaceOS::Source
       status_updated = 0_u64
       pattern = "broker_resync"
 
-      PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
+      paginate_modules do |modules|
         modules.each do |mod|
           next unless mod
           mods_mapped += 1_u64
