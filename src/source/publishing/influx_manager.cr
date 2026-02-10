@@ -16,6 +16,10 @@ module PlaceOS::Source
 
     delegate start, stop, to: publisher
 
+    def stats : Hash(String, UInt64)
+      {"influx" => publisher.processed}
+    end
+
     def initialize(
       @influx_host : String = INFLUX_HOST || abort("INFLUX_HOST unset"),
       @influx_api_key : String = INFLUX_API_KEY || abort("INFLUX_API_KEY unset"),

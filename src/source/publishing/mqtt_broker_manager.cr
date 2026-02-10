@@ -26,6 +26,16 @@ module PlaceOS::Source
       end
     end
 
+    def stats : Hash(String, UInt64)
+      hash = {} of String => UInt64
+      read_publishers do |publishers|
+        publishers.values.each do |publisher|
+          hash["MQTT: #{publisher.broker.name}"] = publisher.processed
+        end
+      end
+      hash
+    end
+
     def process_resource(action : Resource::Action, resource : Model::Broker) : Resource::Result
       # Don't recreate the publisher if only "safe" attributes have changed
       case action
