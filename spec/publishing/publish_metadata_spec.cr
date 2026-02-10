@@ -17,6 +17,10 @@ module PlaceOS::Source
     def broadcast(message : Publisher::Message)
       messages << message
     end
+
+    def stats : Hash(String, UInt64)
+      {"mock" => 0_u64}
+    end
   end
 
   class Dummy
