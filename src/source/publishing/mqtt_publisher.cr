@@ -30,7 +30,7 @@ module PlaceOS::Source
       Event.new(value, timestamp).to_json
     end
 
-    private getter broker : PlaceOS::Model::Broker
+    getter broker : PlaceOS::Model::Broker
     private getter broker_lock : RWLock = RWLock.new
     protected getter client : ::MQTT::V3::Client
 

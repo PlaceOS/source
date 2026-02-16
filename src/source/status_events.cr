@@ -12,9 +12,9 @@ module PlaceOS::Source
     Log = ::Log.for(self)
 
     STATUS_CHANNEL_PATTERN      = "status/#{Model::Module.table_name}-*"
-    MAX_CONTAINER_SIZE          = 50_000
+    MAX_CONTAINER_SIZE          = 40_000
     BATCH_SIZE                  =    100
-    PROCESSING_INTERVAL         = 100.milliseconds
+    PROCESSING_INTERVAL         = 40.milliseconds
     CONTAINER_WARNING_THRESHOLD = MAX_CONTAINER_SIZE * 0.8
 
     private getter! redis : Redis
@@ -66,30 +66,51 @@ module PlaceOS::Source
       redis.close
     end
 
+    def paginate_modules(&)
+      batch_size = 64
+      last_created_at = Time.unix(0)
+      last_id = ""
+
+      loop do
+        modules = PlaceOS::Model::Module
+          .where("created_at > ? OR (created_at = ? AND id > ?)", last_created_at, last_created_at, last_id)
+          .order(created_at: :asc, id: :asc)
+          .limit(batch_size)
+          .to_a
+
+        # process
+        break if modules.empty?
+        modules.each do |mod|
+          yield mod
+        end
+        break if modules.size < batch_size
+
+        last_created_at = modules.last.created_at
+        last_id = modules.last.id
+      end
+    end
+
     def update_values
       mods_mapped = 0_u64
       status_updated = 0_u64
       pattern = "initial_sync"
-      PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
-        modules.each do |mod|
-          next unless mod
-          mods_mapped += 1_u64
-          module_id = mod.id.to_s
-          store = PlaceOS::Driver::RedisStorage.new(module_id)
-          store.each do |key, value|
-            status_updated += 1_u64
-            add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
-          end
-
-          # Backpressure if event container is growing too fast
-          if event_container.size >= MAX_CONTAINER_SIZE / 2
-            until event_container.size < MAX_CONTAINER_SIZE / 4
-              sleep 10.milliseconds
-            end
-          end
-        rescue error
-          Log.warn(exception: error) { "error syncing #{mod.try(&.id)}" }
+      paginate_modules do |mod|
+        mods_mapped += 1_u64
+        module_id = mod.id.to_s
+        store = PlaceOS::Driver::RedisStorage.new(module_id)
+        store.each do |key, value|
+          status_updated += 1_u64
+          add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
         end
+
+        # Backpressure if event container is growing too fast
+        if event_container.size > MAX_CONTAINER_SIZE // 2
+          until event_container.size < MAX_CONTAINER_SIZE // 4
+            sleep 10.milliseconds
+          end
+        end
+      rescue error
+        Log.warn(exception: error) { "error syncing #{mod.try(&.id)}" }
       end
       Log.info { {
         message: "initial status sync complete",
@@ -109,26 +130,23 @@ module PlaceOS::Source
       status_updated = 0_u64
       pattern = "broker_resync"
 
-      PlaceOS::Model::Module.order(id: :asc).all.in_groups_of(64, reuse: true) do |modules|
-        modules.each do |mod|
-          next unless mod
-          mods_mapped += 1_u64
-          module_id = mod.id.to_s
-          store = PlaceOS::Driver::RedisStorage.new(module_id)
-          store.each do |key, value|
-            status_updated += 1_u64
-            add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
-          end
-
-          # Backpressure if event container is growing too fast
-          if event_container.size >= MAX_CONTAINER_SIZE / 2
-            until event_container.size < MAX_CONTAINER_SIZE / 4
-              sleep 10.milliseconds
-            end
-          end
-        rescue error
-          Log.warn(exception: error) { "error resyncing #{mod.try(&.id)}" }
+      paginate_modules do |mod|
+        mods_mapped += 1_u64
+        module_id = mod.id.to_s
+        store = PlaceOS::Driver::RedisStorage.new(module_id)
+        store.each do |key, value|
+          status_updated += 1_u64
+          add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
         end
+
+        # Backpressure if event container is growing too fast
+        if event_container.size >= MAX_CONTAINER_SIZE // 2
+          until event_container.size < MAX_CONTAINER_SIZE // 4
+            sleep 10.milliseconds
+          end
+        end
+      rescue error
+        Log.warn(exception: error) { "error resyncing #{mod.try(&.id)}" }
       end
 
       Log.info { {
@@ -169,6 +187,18 @@ module PlaceOS::Source
           else
             process_batch(batch)
             Fiber.yield
+
+            # This outputs how many writes have occured for each publisher
+            # stats = String.build do |io|
+            #  io << "\n\n\nNEXT BATCH:\n"
+            #  publisher_managers.each do |manager|
+            #    manager.stats.each do |name, count|
+            #      io << "  * #{name} => #{count}"
+            #    end
+            #  end
+            #  io << "\n\n"
+            # end
+            # puts stats
           end
         rescue error
           Log.error(exception: error) { "error processing events" }
