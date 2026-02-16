@@ -1,3 +1,9 @@
+## v1.18.0 (2026-02-16)
+
+### Feat
+
+- Improve memory usage ([#63](https://github.com/PlaceOS/source/pull/63))
+
 ## v1.17.2 (2025-12-03)
 
 ### Fix
