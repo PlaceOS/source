@@ -47,19 +47,50 @@ module PlaceOS::Source
     def initialize(@client : Flux::Client, @bucket : String)
     end
 
+    @buffer : Array(Flux::Point) = Array(Flux::Point).new(StatusEvents::BATCH_SIZE)
+
     # Write an MQTT event to InfluxDB
     #
     def publish(message : Publisher::Message)
       points = self.class.transform(message)
-      points.each do |point|
-        Log.trace { {
-          measurement: point.measurement,
-          timestamp:   point.timestamp.to_s,
-          tags:        point.tags.to_json,
-          fields:      point.fields.to_json,
-        } }
-        client.write(bucket, point)
+      @buffer.concat points
+      commit if @buffer.size >= StatusEvents::BATCH_SIZE
+    end
+
+    def commit : Nil
+      return if @buffer.empty?
+      points = @buffer.dup
+      @buffer.clear
+
+      # points.each do |point|
+      #  Log.trace { {
+      #    measurement: point.measurement,
+      #    timestamp:   point.timestamp.to_s,
+      #    tags:        point.tags.to_json,
+      #    fields:      point.fields.to_json,
+      #  } }
+      #  client.write(bucket, point)
+      # end
+
+      Log.debug { "writing #{points.size} points" }
+
+      begin
+        client.write(bucket, points)
+      rescue error
+        Log.error(exception: error) { "error batch writing points" }
+        points.each do |point|
+          client.write(bucket, point) rescue nil
+        end
       end
+    end
+
+    def self.invalid_string?(str : String) : Bool
+      return true if str.size > 0xFF
+      str.each_byte do |byte|
+        # ASCII control chars + DEL
+        return true if byte < 0x20 || byte == 0x7F
+      end
+      false
     end
 
     @@building_timezones = {} of String => Time::Location?
@@ -141,6 +172,8 @@ module PlaceOS::Source
         case raw = Value.from_json(payload)
         in CustomMetrics then parse_custom(raw, fields, tags, data, timestamp)
         in FieldTypes
+          return [] of Flux::Point if raw.is_a?(String) && invalid_string?(raw)
+
           fields[key] = raw
           point = Flux::Point.new!(
             measurement: data.module_name,
@@ -183,8 +216,10 @@ module PlaceOS::Source
         sub_key = sub_key.gsub(/\W/, '_')
 
         if sub_key == "measurement" && value.is_a?(String)
+          return nil if invalid_string?(value)
           measurement = value
         else
+          next if value.is_a?(String) && invalid_string?(value)
           local[sub_key] = value
         end
       end
@@ -213,6 +248,8 @@ module PlaceOS::Source
       points = Array(Flux::Point).new(initial_capacity: raw.value.size)
       default_measurement = raw.measurement
 
+      return [] of Flux::Point if default_measurement.is_a?(String) && invalid_string?(default_measurement)
+
       raw.value.each_with_index do |val, index|
         # Skip if an empty point
         compacted = val.compact
@@ -231,7 +268,9 @@ module PlaceOS::Source
         local_tags = tags.dup
         local_tags["pos_uniq"] = index.to_s
 
-        points << build_custom_point(measurement, data, fields, local_tags, compacted, override_timestamp || timestamp, ts_map, raw.ts_tag_keys)
+        if point = build_custom_point(measurement, data, fields, local_tags, compacted, override_timestamp || timestamp, ts_map, raw.ts_tag_keys)
+          points << point
+        end
       end
 
       points
@@ -249,6 +288,8 @@ module PlaceOS::Source
           local_fields[sub_key] = value
         end
       end
+
+      return nil if measurement_value.is_a?(String) && invalid_string?(measurement_value)
 
       # convert fields to tags as required
       if ts_tag_keys
