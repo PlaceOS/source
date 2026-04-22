@@ -33,7 +33,7 @@ dependencies:
     github: place-labs/resource
 
   redis:
-    github: stefanwille/crystal-redis
+    github: place-labs/crystal-redis
 
   pg-orm:
     github: spider-gazelle/pg-orm
