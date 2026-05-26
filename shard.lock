@@ -11,7 +11,7 @@ shards:
 
   active-model:
     git: https://github.com/spider-gazelle/active-model.git
-    version: 4.3.3
+    version: 4.4.2
 
   ameba:
     git: https://github.com/crystal-ameba/ameba.git
@@ -195,7 +195,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.91.0
+    version: 9.93.0
 
   placeos-resource:
     git: https://github.com/place-labs/resource.git
@@ -232,6 +232,10 @@ shards:
   rwlock:
     git: https://github.com/spider-gazelle/readers-writer.git
     version: 1.0.7
+
+  sanitize:
+    git: https://github.com/straight-shoota/sanitize.git
+    version: 0.1.0+git.commit.c17d933fed22c6d3d615cca91a895166414389af
 
   secrets-env:
     git: https://github.com/place-labs/secrets-env.git
