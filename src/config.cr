@@ -1,3 +1,6 @@
+require "dns"
+require "dns/ext/addrinfo"
+
 require "./logging"
 
 # Application dependencies

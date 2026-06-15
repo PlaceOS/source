@@ -50,6 +50,9 @@ dependencies:
   tasker:
     github: spider-gazelle/tasker
 
+  dns:
+    github: spider-gazelle/dns
+
 development_dependencies:
   faker:
     github: askn/faker
