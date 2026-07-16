@@ -39,7 +39,7 @@ shards:
 
   connect-proxy:
     git: https://github.com/spider-gazelle/connect-proxy.git
-    version: 2.0.3
+    version: 2.0.5
 
   crc16:
     git: https://github.com/maiha/crc16.cr.git
@@ -67,7 +67,7 @@ shards:
 
   dtls:
     git: https://github.com/spider-gazelle/crystal-dtls.git
-    version: 0.9.2
+    version: 0.9.4
 
   ed25519:
     git: https://github.com/spider-gazelle/ed25519.git
@@ -179,11 +179,11 @@ shards:
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 2.2.2
+    version: 2.2.3
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
-    version: 4.29.4
+    version: 4.30.0
 
   placeos-core-client:
     git: https://github.com/placeos/core-client.git
@@ -199,7 +199,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.100.0
+    version: 9.100.1
 
   placeos-resource:
     git: https://github.com/place-labs/resource.git
@@ -215,11 +215,11 @@ shards:
 
   redis:
     git: https://github.com/place-labs/crystal-redis.git
-    version: 2.9.2+git.commit.bdf446711222baa17ee60d40d915b626c1cb11f9
+    version: 2.9.2+git.commit.52e111ee3bbbdc41fbd3509398c08cc0e8e40e59
 
   redis-cluster:
     git: https://github.com/caspiano/redis-cluster.cr.git
-    version: 0.8.12
+    version: 0.8.13
 
   rendezvous-hash:
     git: https://github.com/caspiano/rendezvous-hash.git
