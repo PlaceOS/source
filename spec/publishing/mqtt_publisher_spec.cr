@@ -257,6 +257,35 @@ module PlaceOS::Source
       end
     end
 
+    # A topic only holds the current value, so when a Module moves or goes away
+    # the value it left behind is a ghost: consumers keep reading state for
+    # something that no longer publishes there
+    describe "removing retained state" do
+      it "clears the retained value for a key" do
+        status_event, key = PlaceOS::Source.unique_status_event
+
+        PlaceOS::Source.with_publisher do |publisher|
+          publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
+          sleep 200.milliseconds
+          publisher.delete(Publisher::Message.new(status_event, nil, timestamp: Time.utc))
+          sleep 300.milliseconds
+        end
+
+        client = PlaceOS::Source.subscriber
+        begin
+          messages = PlaceOS::Source.subscribe_channel(client, key)
+          select
+          when leftover = messages.receive
+            fail "retained value should have been removed, got #{leftover.inspect}"
+          when timeout(3.seconds)
+            # nothing retained, which is the pass condition
+          end
+        ensure
+          client.disconnect rescue nil
+        end
+      end
+    end
+
     describe "keys" do
       it "creates a state event topic" do
         state = mock_state(

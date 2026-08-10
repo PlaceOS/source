@@ -41,8 +41,19 @@ module PlaceOS::Source
 
     getter messages : Array(Publisher::Message) = [] of Publisher::Message
 
+    # Keys whose retained value was queued for removal
+    getter deletions : Array(Publisher::Message) = [] of Publisher::Message
+
     def broadcast(message : Publisher::Message)
       messages << message
+    end
+
+    def broadcast_delete(message : Publisher::Message)
+      deletions << message
+    end
+
+    def deletes_pending? : Bool
+      false
     end
 
     def start

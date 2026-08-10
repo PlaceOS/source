@@ -132,6 +132,30 @@ module PlaceOS::Source
       Log.error(exception: e) { "error while publishing Message<data=#{message.data}, key=#{key}, payload=#{message.payload}>" }
     end
 
+    # MQTT-3.3.1-7, a zero length retained payload removes what the broker holds
+    # for the topic. Anything else — including a JSON null — would simply be
+    # retained in its place, and consumers would keep seeing a value
+    def delete(message : Message) : Nil
+      key = MqttPublisher.generate_key(message.data)
+      return unless key
+
+      Log.trace { {message: "removing retained value", key: key} }
+
+      Retriable.retry(
+        max_attempts: 10,
+        base_interval: 250.milliseconds,
+        max_interval: 5.seconds,
+        on: IO::Error | MQTT::Error,
+        on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
+          Log.warn(exception: e) { "MQTT delete failed, waiting for the client to reconnect" }
+        }
+      ) do
+        client.publish(topic: key, payload: "", retain: true)
+      end
+    rescue e
+      Log.error(exception: e) { "error removing retained value for #{message.data}" }
+    end
+
     # Key generation
     ###########################################################################
 

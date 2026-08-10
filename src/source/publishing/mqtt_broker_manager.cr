@@ -26,6 +26,22 @@ module PlaceOS::Source
       end
     end
 
+    # Broadcast a deletion to each MQTT Broker
+    #
+    def broadcast_delete(message : Publisher::Message)
+      read_publishers do |publishers|
+        publishers.values.each do |publisher|
+          publisher.delete_queue.send(message)
+        end
+      end
+    end
+
+    def deletes_pending? : Bool
+      read_publishers do |publishers|
+        publishers.values.any?(&.deletes_pending?)
+      end
+    end
+
     def stats : Hash(String, UInt64)
       hash = {} of String => UInt64
       read_publishers do |publishers|
