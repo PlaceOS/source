@@ -1,3 +1,9 @@
+## v1.21.0 (2026-08-10)
+
+### Feat
+
+- **mqtt**: upgrade to mqtt 2.0.1 and the negotiating client
+
 ## v1.20.0 (2026-06-15)
 
 ### Feat
