@@ -11,13 +11,13 @@ targets:
 dependencies:
   placeos-driver:
     github: placeos/driver
-    version: ~> 6.3
 
   action-controller:
     github: spider-gazelle/action-controller
 
   flux:
     github: place-labs/flux
+    version: ">= 3.0.2"
 
   mqtt:
     github: spider-gazelle/crystal-mqtt
@@ -49,6 +49,7 @@ dependencies:
 
   tasker:
     github: spider-gazelle/tasker
+    version: ">= 3.1.0"
 
   dns:
     github: spider-gazelle/dns

@@ -65,17 +65,24 @@ module PlaceOS::Source
         return Resource::Result::Error
       end
 
-      write_publishers do |publishers|
+      already_publishing = write_publishers do |publishers|
         # Close off exisiting publisher, if present
         existing = publishers[broker_id]?
         existing.stop unless existing.nil?
         publishers[broker_id] = publisher
+        !existing.nil?
       end
 
       publisher.start
 
-      # Trigger state sync callback if this is a new broker after startup
-      if startup_finished?
+      # Trigger state sync callback if this is a new broker after startup.
+      #
+      # NOTE:: "new" has to mean we had no publisher for it, not merely that
+      # startup has finished. `Resource#start` opens the changefeed before it
+      # loads existing rows, so a create event for a Broker we already loaded
+      # arrives once startup is marked complete — and re-publishing all state
+      # for a Broker we were already connected to is wasted work
+      if startup_finished? && !already_publishing
         Log.info { "new broker connected after startup, triggering state sync for Broker<#{broker_id}>" }
         on_broker_ready.try &.call(broker_id)
       end

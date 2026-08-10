@@ -1,10 +1,9 @@
 require "file"
 require "json"
-require "mqtt/v3/client"
+require "mqtt/client"
 require "placeos-models/broker"
 require "retriable"
 require "rwlock"
-require "tasker"
 
 require "./publisher"
 
@@ -32,20 +31,27 @@ module PlaceOS::Source
 
     getter broker : PlaceOS::Model::Broker
     private getter broker_lock : RWLock = RWLock.new
-    protected getter client : ::MQTT::V3::Client
+
+    # NOTE:: `MQTT::Client` negotiates the protocol version, connecting as 5.0
+    # and falling back to 3.1.1 when the broker will not take it
+    getter client : ::MQTT::Client
 
     def initialize(@broker : PlaceOS::Model::Broker)
-      @client = new_client
+      @client = MqttPublisher.client(@broker)
     end
 
-    protected def new_client
-      @client = MqttPublisher.client(@broker)
+    # The protocol version that was actually negotiated with this broker
+    def protocol_version : ::MQTT::Version?
+      client.version
     end
 
     def stop
       super
-      client.wait_close
+      # NOTE:: disconnect first. `wait_close` blocks until the connection has
+      # terminated, so waiting before asking it to stop hangs until the broker
+      # gives up on us
       client.disconnect
+      client.wait_close
     end
 
     def set_broker(broker : PlaceOS::Model::Broker)
@@ -54,52 +60,41 @@ module PlaceOS::Source
       end
     end
 
-    # Create an authenticated MQTT client off metadata in the Broker
-    def self.client(broker : PlaceOS::Model::Broker)
+    KEEP_ALIVE = 60
+
+    # Create an authenticated MQTT client off metadata in the Broker.
+    #
+    # The connection settings are captured here rather than read from the model
+    # on each attempt: a `Broker` update that changes them is not a "safe"
+    # update, so `MqttBrokerManager` replaces the publisher outright
+    def self.client(broker : PlaceOS::Model::Broker) : ::MQTT::Client
       Log.debug { {message: "creating MQTT client", host: broker.host, port: broker.port.to_s, tls: broker.tls} }
 
-      # Create a transport (TCP, UDP, Websocket etc)
-      tls = if broker.tls
-              tls_client = OpenSSL::SSL::Context::Client.new
-              tls_client.verify_mode = OpenSSL::SSL::VerifyMode::NONE
-              tls_client
-            else
-              nil
-            end
+      host = broker.host
+      port = broker.port
+      secure = broker.tls
 
-      transport = ::MQTT::Transport::TCP.new(
-        host: broker.host,
-        port: broker.port,
-        tls_context: tls
-      )
+      # NOTE:: a factory rather than a single transport, because a socket cannot
+      # be reopened. This is what lets the client re-establish the connection
+      # itself, and what version negotiation needs for its fallback attempt
+      client = ::MQTT::Client.new(reconnect: ::MQTT::Reconnect.new) do
+        tls = if secure
+                tls_client = OpenSSL::SSL::Context::Client.new
+                tls_client.verify_mode = OpenSSL::SSL::VerifyMode::NONE
+                tls_client
+              end
 
-      # Establish a MQTT connection
-      client = ::MQTT::V3::Client.new(transport)
+        ::MQTT::Transport::TCP.new(host: host, port: port, tls_context: tls).as(::MQTT::Transport)
+      end
 
-      keep_alive = 60
-
-      client.connect(
+      version = client.connect(
         client_id: broker.id.as(String),
-        keep_alive: keep_alive,
+        keep_alive: KEEP_ALIVE,
         username: broker.username,
         password: broker.password,
       )
 
-      # Small delay to ensure connection is fully established
-      sleep 100.milliseconds
-
-      close_channel = Channel(Nil).new(1)
-
-      repeating_task = Tasker.every((keep_alive // 3).seconds) do
-        close_channel.close if client.closed?
-      end
-
-      # Spawn a helper fiber to cancel the repeating ping task
-      spawn do
-        # Block waiting for close event
-        close_channel.receive?
-        repeating_task.cancel
-      end
+      Log.info { {message: "connected to MQTT broker", host: host, port: port.to_s, protocol: version.to_s} }
 
       client
     end
@@ -113,10 +108,23 @@ module PlaceOS::Source
 
         Log.trace { {message: "writing to MQTT", key: key} }
 
-        Retriable.retry(max_attempts: 20, on: IO::Error | MQTT::Error, on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
-          Log.error(exception: e) { "MQTT connection error, reconnecting..." }
-          new_client
-        }) do
+        # NOTE:: `retain: true` is what makes the current value of every status
+        # available to a subscriber that connects later. The broker holds one
+        # message per topic, so this is the state of the system, not a log of it
+        #
+        # The client re-establishes a dropped connection itself, so a retry here
+        # only has to cover the window while that is happening. It must not
+        # build a new client — the old code did, which orphaned the previous
+        # connection on every retry
+        Retriable.retry(
+          max_attempts: 10,
+          base_interval: 250.milliseconds,
+          max_interval: 5.seconds,
+          on: IO::Error | MQTT::Error,
+          on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
+            Log.warn(exception: e) { "MQTT publish failed, waiting for the client to reconnect" }
+          }
+        ) do
           client.publish(topic: key, payload: payload, retain: true)
         end
       end

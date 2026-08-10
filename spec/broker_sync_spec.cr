@@ -55,11 +55,14 @@ module PlaceOS::Source
       # Setup MQTT broker manager
       mqtt_manager = MqttBrokerManager.new
 
-      # Track if callback was invoked
-      callback_invoked = false
+      # Record which brokers the callback fired for. Asserting it never fired
+      # at all makes this example depend on nothing else in the suite having a
+      # Broker in flight, which is not something it controls
+      notified = [] of String
 
-      mqtt_manager.on_broker_ready = ->(_broker_id : String) {
-        callback_invoked = true
+      mqtt_manager.on_broker_ready = ->(broker_id : String) {
+        notified << broker_id
+        nil
       }
 
       # Create broker before starting (simulating existing broker)
@@ -74,8 +77,9 @@ module PlaceOS::Source
       # Verify the broker was loaded
       mqtt_manager.@publishers[startup_broker.id.as(String)]?.should_not be_nil
 
-      # Verify the callback was NOT invoked during startup
-      callback_invoked.should be_false
+      # A broker that already existed when the manager started was loaded during
+      # startup, so it must not be announced as newly ready
+      notified.should_not contain startup_broker.id.as(String)
 
       # Cleanup
       mqtt_manager.stop

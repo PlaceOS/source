@@ -77,10 +77,6 @@ shards:
     git: https://github.com/arcage/crystal-email.git
     version: 0.7.1
 
-  etcd:
-    git: https://github.com/place-labs/crystal-etcd.git
-    version: 1.3.0
-
   eventbus:
     git: https://github.com/spider-gazelle/eventbus.git
     version: 1.0.2+git.commit.1cec22837b2dfa7110376cff55c14ce57050eb9a
@@ -95,7 +91,7 @@ shards:
 
   flux:
     git: https://github.com/place-labs/flux.git
-    version: 3.0.2
+    version: 3.1.0
 
   future:
     git: https://github.com/crystal-community/future.cr.git
@@ -112,10 +108,6 @@ shards:
   hot_topic:
     git: https://github.com/jgaskins/hot_topic.git
     version: 0.1.0+git.commit.4eafc046ed4d98bbab7a4534da57e163ea16b6c6
-
-  hound-dog:
-    git: https://github.com/place-labs/hound-dog.git
-    version: 2.9.1
 
   http-params-serializable:
     git: https://github.com/place-labs/http-params-serializable.git
@@ -147,7 +139,7 @@ shards:
 
   mqtt:
     git: https://github.com/spider-gazelle/crystal-mqtt.git
-    version: 1.2.3
+    version: 2.0.1
 
   murmur3:
     git: https://github.com/aca-labs/murmur3.git
@@ -179,7 +171,7 @@ shards:
 
   pg-orm:
     git: https://github.com/spider-gazelle/pg-orm.git
-    version: 2.2.3
+    version: 2.2.4
 
   place_calendar:
     git: https://github.com/placeos/calendar.git
@@ -191,7 +183,7 @@ shards:
 
   placeos-driver:
     git: https://github.com/placeos/driver.git
-    version: 6.10.0
+    version: 8.1.3
 
   placeos-log-backend:
     git: https://github.com/place-labs/log-backend.git
@@ -199,7 +191,7 @@ shards:
 
   placeos-models:
     git: https://github.com/placeos/models.git
-    version: 9.105.2
+    version: 9.106.2
 
   placeos-resource:
     git: https://github.com/place-labs/resource.git
@@ -218,8 +210,12 @@ shards:
     version: 2.9.2+git.commit.52e111ee3bbbdc41fbd3509398c08cc0e8e40e59
 
   redis-cluster:
-    git: https://github.com/caspiano/redis-cluster.cr.git
+    git: https://github.com/place-labs/redis-cluster.cr.git
     version: 0.8.13
+
+  redis_service_manager:
+    git: https://github.com/place-labs/redis_service_manager.git
+    version: 3.4.1
 
   rendezvous-hash:
     git: https://github.com/caspiano/rendezvous-hash.git
@@ -255,7 +251,7 @@ shards:
 
   tasker:
     git: https://github.com/spider-gazelle/tasker.git
-    version: 2.1.4
+    version: 3.1.0
 
   tokenizer:
     git: https://github.com/spider-gazelle/tokenizer.git

@@ -50,6 +50,10 @@ module PlaceOS::Source
 
     def stop
     end
+
+    def stats : Hash(String, UInt64)
+      {"Mock" => messages.size.to_u64}
+    end
   end
 
   def self.mock_state(
