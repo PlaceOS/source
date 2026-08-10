@@ -25,6 +25,17 @@ module PlaceOS::Source
     getter processed : UInt64 = 0_u64
     getter deleted : UInt64 = 0_u64
 
+    # NOTE:: counted rather than asking the channel. `Channel#empty?` blocks
+    # forever on an empty channel, so it cannot be used to ask whether work is
+    # outstanding
+    @pending_deletes = Atomic(Int32).new(0)
+
+    # Queues removal of whatever is retained for the message's key
+    def queue_delete(message : Message) : Nil
+      @pending_deletes.add(1)
+      delete_queue.send(message)
+    end
+
     abstract def publish(message : Message)
 
     # Removes whatever is retained for the message's key.
@@ -39,7 +50,7 @@ module PlaceOS::Source
     # Whether every queued deletion has been dealt with. A state resync waits
     # on this, so it cannot republish a key that is about to be removed
     def deletes_pending? : Bool
-      !delete_queue.empty?
+      @pending_deletes.get > 0
     end
 
     def start
@@ -53,10 +64,14 @@ module PlaceOS::Source
 
     private def consume_messages
       while !message_queue.closed?
-        # deletions first, always, and keep going while any remain
-        next if drain_deletion
-
+        # NOTE:: `select` makes a non-blocking pass over its branches in order,
+        # so listing deletions first is what gives them priority when both
+        # queues are ready. A rename removes the old topic and republishes
+        # under the new one, and a deletion arriving late would take the new
+        # value straight back out
         select
+        when deletion = delete_queue.receive?
+          handle_deletion(deletion) if deletion
         when message = message_queue.receive?
           if message
             begin
@@ -66,30 +81,10 @@ module PlaceOS::Source
               Log.warn(exception: error) { "publishing message: #{message}" }
             end
           end
-        when deletion = delete_queue.receive?
-          handle_deletion(deletion) if deletion
         when timeout(10.seconds)
           # commit any buffered messages that have not been published yet
           commit
         end
-      end
-    end
-
-    # Takes a deletion without blocking, so a pending one always goes first.
-    #
-    # NOTE:: a closed channel yields nil from `receive?` immediately, so this
-    # has to report "nothing taken" for it — otherwise the caller spins on a
-    # closed queue instead of noticing it should stop
-    private def drain_deletion : Bool
-      return false if delete_queue.closed?
-
-      select
-      when deletion = delete_queue.receive?
-        return false if deletion.nil?
-        handle_deletion(deletion)
-        true
-      else
-        false
       end
     end
 
@@ -98,6 +93,8 @@ module PlaceOS::Source
       @deleted += 1_u64
     rescue error
       Log.warn(exception: error) { "deleting retained message: #{message}" }
+    ensure
+      @pending_deletes.sub(1)
     end
   end
 end

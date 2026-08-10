@@ -26,7 +26,7 @@ module PlaceOS::Source
       # queued messages first, deletions second — order of arrival must not
       # decide order of work
       3.times { |i| publisher.message_queue.send(Publisher::Message.new(event, "message-#{i}", Time.utc)) }
-      2.times { |i| publisher.delete_queue.send(Publisher::Message.new(event, "deletion-#{i}", Time.utc)) }
+      2.times { |i| publisher.queue_delete(Publisher::Message.new(event, "deletion-#{i}", Time.utc)) }
 
       publisher.start
       sleep 200.milliseconds
@@ -43,7 +43,7 @@ module PlaceOS::Source
       event = Mappings::Metadata.new("mod-1234", "hello")
 
       publisher.deletes_pending?.should be_false
-      publisher.delete_queue.send(Publisher::Message.new(event, "pending", Time.utc))
+      publisher.queue_delete(Publisher::Message.new(event, "pending", Time.utc))
       publisher.deletes_pending?.should be_true
 
       publisher.start

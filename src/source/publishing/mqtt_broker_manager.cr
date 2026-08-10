@@ -31,7 +31,7 @@ module PlaceOS::Source
     def broadcast_delete(message : Publisher::Message)
       read_publishers do |publishers|
         publishers.values.each do |publisher|
-          publisher.delete_queue.send(message)
+          publisher.queue_delete(message)
         end
       end
     end
