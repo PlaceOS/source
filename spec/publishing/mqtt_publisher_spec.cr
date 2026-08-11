@@ -1,97 +1,6 @@
 require "../spec_helper"
 
 module PlaceOS::Source
-  # Builds a status event and its MQTT topic under a scope unique to the caller.
-  #
-  # NOTE:: the org id has to vary too, not just the module. Retained messages
-  # live in the broker until something replaces them, so a shared scope means a
-  # wildcard subscription picks up whatever earlier examples — or earlier runs
-  # against the same container — left behind
-  def self.unique_status_event(org_id : String = "org-#{UUID.random}")
-    module_id = UUID.random.to_s
-    state = mock_state(
-      module_id: module_id,
-      index: 5,
-      module_name: "M'Odule",
-      driver_id: "12345",
-      control_system_id: "cs-#{UUID.random}",
-      area_id: "2042",
-      level_id: "nek",
-      building_id: "cards",
-      org_id: org_id,
-    )
-
-    event = Mappings.new(state).status_events?(module_id, "power").not_nil!.first
-    {event, MqttPublisher.generate_key(event).not_nil!}
-  end
-
-  # A Broker of its own per example, deliberately **not** persisted.
-  #
-  # Two reasons. The publisher connects with the broker id as its MQTT client
-  # id, so examples sharing one take each other's session over — and a client
-  # that has been taken over stays down, by design.
-  #
-  # Saving it would swap that problem for a worse one: `MqttBrokerManager` is a
-  # `Resource(Model::Broker)`, so any manager still running from an earlier spec
-  # reacts to the new row, builds its own publisher for it, and takes the
-  # session over from underneath us
-  def self.isolated_broker : PlaceOS::Model::Broker
-    shared = test_broker
-    broker = PlaceOS::Model::Broker.new(
-      name: "spec-#{UUID.random}",
-      host: shared.host,
-      port: shared.port,
-      auth_type: :no_auth,
-    )
-    broker.id = "spec-broker-#{UUID.random}"
-    broker
-  end
-
-  # Runs a block with a publisher on its own broker, cleaning both up after
-  def self.with_publisher(&)
-    broker = isolated_broker
-    publisher = MqttPublisher.new(broker)
-    begin
-      yield publisher
-    ensure
-      publisher.stop rescue nil
-    end
-  end
-
-  # A bare client against the same broker, standing in for anything else that
-  # consumes the state we publish
-  def self.subscriber(broker = test_broker) : ::MQTT::Client
-    client = ::MQTT::Client.new do
-      ::MQTT::Transport::TCP.new(host: broker.host, port: broker.port).as(::MQTT::Transport)
-    end
-    client.connect(client_id: "spec-subscriber-#{UUID.random}")
-    client
-  end
-
-  # Subscribes and hands back a channel of everything that arrives
-  def self.subscribe_channel(client, topic) : Channel(Tuple(String, String, Bool))
-    received = Channel(Tuple(String, String, Bool)).new(16)
-    client.subscribe(topic) do |key, payload, retained|
-      received.send({key, String.new(payload), retained})
-      nil
-    end
-    received
-  end
-
-  def self.take(received, topic, timeout = 10.seconds)
-    select
-    when message = received.receive
-      message
-    when timeout(timeout)
-      raise "timed out waiting for a message on #{topic}"
-    end
-  end
-
-  def self.collect(client, topic, count = 1, timeout = 10.seconds)
-    received = subscribe_channel(client, topic)
-    Array(Tuple(String, String, Bool)).new(count) { take(received, topic, timeout) }
-  end
-
   describe MqttPublisher do
     describe "connection" do
       it "negotiates a protocol version with the broker" do
@@ -251,6 +160,35 @@ module PlaceOS::Source
           keys = messages.map(&.[](0))
           keys.should contain first_key
           keys.should contain second_key
+        ensure
+          client.disconnect rescue nil
+        end
+      end
+    end
+
+    # A topic only holds the current value, so when a Module moves or goes away
+    # the value it left behind is a ghost: consumers keep reading state for
+    # something that no longer publishes there
+    describe "removing retained state" do
+      it "clears the retained value for a key" do
+        status_event, key = PlaceOS::Source.unique_status_event
+
+        PlaceOS::Source.with_publisher do |publisher|
+          publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
+          sleep 200.milliseconds
+          publisher.delete(Publisher::Message.new(status_event, nil, timestamp: Time.utc))
+          sleep 300.milliseconds
+        end
+
+        client = PlaceOS::Source.subscriber
+        begin
+          messages = PlaceOS::Source.subscribe_channel(client, key)
+          select
+          when leftover = messages.receive
+            fail "retained value should have been removed, got #{leftover.inspect}"
+          when timeout(3.seconds)
+            # nothing retained, which is the pass condition
+          end
         ensure
           client.disconnect rescue nil
         end

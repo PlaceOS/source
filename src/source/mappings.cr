@@ -67,6 +67,18 @@ module PlaceOS::Source
       end
     end
 
+    # Every status topic currently mapped for a Module.
+    #
+    # Called *before* a mapping is rewritten, so the caller gets the topics as
+    # they exist right now — the ones that have to be removed once the Module
+    # moves or goes away. The statuses themselves come from the Module's
+    # storage, the same source a state resync reads
+    def current_status_events(module_id : String, statuses : Enumerable(String)) : Array(Status)
+      statuses.flat_map do |status|
+        status_events?(module_id, status) || [] of Status
+      end
+    end
+
     record Status,
       status : String,
       index : Int32,

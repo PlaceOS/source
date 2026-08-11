@@ -25,7 +25,7 @@ module PlaceOS::Source
     )
       @control_system_router = Router::ControlSystem.new(mappings, publisher_managers)
       @driver_router = Router::Driver.new(mappings, publisher_managers)
-      @module_router = Router::Module.new(mappings)
+      @module_router = Router::Module.new(mappings, publisher_managers)
       @zone_router = Router::Zone.new(mappings, publisher_managers)
       @status_events = StatusEvents.new(mappings, publisher_managers)
     end

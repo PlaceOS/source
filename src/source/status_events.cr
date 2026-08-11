@@ -66,6 +66,19 @@ module PlaceOS::Source
       redis.close
     end
 
+    # Blocks until every publisher has dealt with its queued deletions
+    def await_deletions(timeout : Time::Span = 30.seconds) : Nil
+      expire = Time.utc + timeout
+
+      while publisher_managers.any?(&.deletes_pending?)
+        if Time.utc > expire
+          Log.warn { "timed out waiting for queued deletions to drain" }
+          return
+        end
+        sleep 50.milliseconds
+      end
+    end
+
     def paginate_modules(&)
       batch_size = 64
       last_created_at = Time.unix(0)
@@ -123,6 +136,12 @@ module PlaceOS::Source
     # Trigger a state resync - useful when new brokers are added
     def resync_state
       return unless initial_sync_complete?
+
+      # A resync republishes current state for every Module. Queued deletions
+      # are removals of topics that no longer exist, so running before they
+      # drain would republish a key that is about to be taken away — and the
+      # delete would then remove a value that is still live
+      await_deletions
 
       Log.info { "resyncing state for new broker connection" }
 

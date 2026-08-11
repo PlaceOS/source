@@ -30,6 +30,16 @@ module PlaceOS::Source
       @publisher = InfluxPublisher.new(client, influx_bucket)
     end
 
+    # InfluxDB stores a time series rather than current state, so there is
+    # nothing retained to remove. History of a renamed Module stays under its
+    # old tags, which is what you want from a time series
+    def broadcast_delete(message : Publisher::Message)
+    end
+
+    def deletes_pending? : Bool
+      false
+    end
+
     def broadcast(message : Publisher::Message)
       publisher.message_queue.send(message)
     end
