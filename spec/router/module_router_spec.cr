@@ -54,7 +54,7 @@ module PlaceOS::Source
         Router::Module.new(mappings).handle_delete(mod)
 
         mappings.read(&.drivers).should eq({"mod-stays" => "driver-sns"})
-        mappings.read { |current| current.system_modules.has_key?("mod-gone") }.should be_false
+        mappings.read(&.system_modules.has_key?("mod-gone")).should be_false
       end
     end
 
