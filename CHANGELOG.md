@@ -1,4 +1,8 @@
-## Unreleased
+## v1.22.0 (2026-08-11)
+
+### Feat
+
+- clear retained state when a topic moves or goes away ([#64](https://github.com/PlaceOS/source/pull/64))
 
 ## v1.21.0 (2026-08-10)
 
