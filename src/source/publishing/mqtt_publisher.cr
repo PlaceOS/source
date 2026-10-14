@@ -196,14 +196,15 @@ module PlaceOS::Source
       Log.error(exception: e) { "error removing retained value for #{key}" }
     end
 
-    # Every status topic the broker currently retains, as a client connecting
-    # now would be handed them.
+    # The status topics the broker currently retains, as a client connecting
+    # now would be handed them, that `keep` returns true for. Each topic is
+    # passed to `keep` as it arrives, so only those wanted are held.
     #
     # The broker sends retained messages straight after it acknowledges the
     # subscription, so collection ends once `quiet` passes without one, or at
     # `limit` regardless. Only retained messages count: a live publication
     # arriving meanwhile is not part of what was there.
-    def retained_state_topics(quiet : Time::Span = 2.seconds, limit : Time::Span = 2.minutes) : Set(String)
+    def retained_state_topics(quiet : Time::Span = 2.seconds, limit : Time::Span = 2.minutes, &keep : String -> Bool) : Set(String)
       filter = File.join(MQTT_NAMESPACE, "+", "state", "#")
       topics = Set(String).new
       lock = Mutex.new
@@ -211,8 +212,9 @@ module PlaceOS::Source
 
       client.subscribe(filter) do |topic, payload, retained|
         next unless retained && !payload.empty?
+        wanted = keep.call(topic)
         lock.synchronize do
-          topics << topic
+          topics << topic if wanted
           last = Time.instant
         end
       end
@@ -283,6 +285,15 @@ module PlaceOS::Source
         subhierarchy,
         module_key,
       )
+    end
+
+    # Where the system id sits in a state topic: after the namespace, the
+    # scope, `state` and the rest of the hierarchy
+    STATE_TOPIC_SYSTEM_SEGMENT = MQTT_NAMESPACE.split('/').size + 2 + (HIERARCHY.size - 1)
+
+    # The system a state topic belongs to
+    def self.state_topic_system_id(topic : String) : String?
+      topic.split('/')[STATE_TOPIC_SYSTEM_SEGMENT]?
     end
 
     def self.extract_zone_hierarchy(zone_mapping : Hash(String, String))

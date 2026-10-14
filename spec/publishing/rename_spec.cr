@@ -11,7 +11,7 @@ module PlaceOS::Source
   def self.mapped(module_id : String, name : String, index : Int32, org : String) : Mappings
     state = Mappings::State.new
     state.drivers[module_id] = "driver-1234"
-    state.system_modules[module_id] = [{name: name, control_system_id: "cs-1", index: index}]
+    state.map_module(module_id, {name: name, control_system_id: "cs-1", index: index})
     state.system_zones["cs-1"] = {"org" => org, "building" => "b", "level" => "l", "area" => "a"}
     Mappings.new(state)
   end

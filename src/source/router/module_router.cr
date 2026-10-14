@@ -52,7 +52,7 @@ module PlaceOS::Source::Router
       mappings.write do |state|
         # Remove reference in drivers
         state.drivers.delete(module_id)
-        state.system_modules.delete(module_id)
+        state.unmap_module(module_id)
       end
 
       # What it published is known from the registry, not from its storage,

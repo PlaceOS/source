@@ -16,17 +16,30 @@ module PlaceOS::Source
     # module_id => statuses published for it, one per system it is mapped in
     private getter events = Hash(String, Set(Mappings::Status)).new
 
+    # control_system_id => module_id => how many of its statuses are there.
+    # So a system can be looked up without scanning everything published
+    private getter by_system = Hash(String, Hash(String, Int32)).new
+
     def add(event : Mappings::Status) : Nil
       lock.synchronize do
-        (events[event.module_id] ||= Set(Mappings::Status).new) << event
+        set = events[event.module_id] ||= Set(Mappings::Status).new
+        next if set.includes?(event)
+        set << event
+        counts = by_system[event.control_system_id] ||= Hash(String, Int32).new(0)
+        counts[event.module_id] += 1
       end
     end
 
     def remove(event : Mappings::Status) : Nil
       lock.synchronize do
-        if set = events[event.module_id]?
-          set.delete(event)
-          events.delete(event.module_id) if set.empty?
+        next unless set = events[event.module_id]?
+        next unless set.delete(event)
+        events.delete(event.module_id) if set.empty?
+
+        next unless counts = by_system[event.control_system_id]?
+        if (counts[event.module_id] -= 1) <= 0
+          counts.delete(event.module_id)
+          by_system.delete(event.control_system_id) if counts.empty?
         end
       end
     end
@@ -35,18 +48,24 @@ module PlaceOS::Source
       lock.synchronize { events[module_id]?.try(&.dup) || Set(Mappings::Status).new }
     end
 
-    # Modules with anything published that matches the block
-    def module_ids(& : Mappings::Status -> Bool) : Set(String)
+    # Modules with anything published in any of these systems
+    def module_ids_in(control_system_ids : Enumerable(String)) : Set(String)
       lock.synchronize do
-        events.each_with_object(Set(String).new) do |(module_id, set), ids|
-          ids << module_id if set.any? { |event| yield event }
+        control_system_ids.each_with_object(Set(String).new) do |control_system_id, ids|
+          by_system[control_system_id]?.try &.each_key { |module_id| ids << module_id }
         end
       end
     end
 
-    # Every event published, for comparing with what a broker holds
-    def all : Array(Mappings::Status)
-      lock.synchronize { events.values.flat_map(&.to_a) }
+    # Everything published in one system
+    def for_system(control_system_id : String) : Array(Mappings::Status)
+      lock.synchronize do
+        found = [] of Mappings::Status
+        by_system[control_system_id]?.try &.each_key do |module_id|
+          events[module_id]?.try &.each { |event| found << event if event.control_system_id == control_system_id }
+        end
+        found
+      end
     end
   end
 end

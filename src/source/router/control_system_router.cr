@@ -35,7 +35,11 @@ module PlaceOS::Source::Router
     private getter sync_lock = Mutex.new
 
     def handle_create(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
-      sync(control_system.id.as(String))
+      # While the routers load, events are only the rows just read, one per
+      # system, and change events wait until loading is done. So the row can
+      # be used as it is, rather than read again for every system
+      loaded = control_system unless startup_finished?
+      sync(control_system.id.as(String), loaded)
     end
 
     def handle_update(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
@@ -53,10 +57,16 @@ module PlaceOS::Source::Router
     # system's modules of the same name, so a change to either moves topics.
     # Reconciling removes the old ones and publishes current values at the new
     # ones — which also covers a module whose state was written before the
-    # system mapped it, and so was published nowhere
-    def sync(control_system_id : String) : Resource::Result
+    # system mapped it, and so was published nowhere.
+    #
+    # `loaded` is the system as the initial load read it. Nothing is
+    # reconciled for it: status events have not started, nothing is published
+    # yet to take away, and their initial sync publishes every Module against
+    # the mappings built here. Queueing them all would read the state of every
+    # Module a second time, in one batch
+    def sync(control_system_id : String, loaded : PlaceOS::Model::ControlSystem? = nil) : Resource::Result
       sync_lock.synchronize do
-        current = PlaceOS::Model::ControlSystem.find?(control_system_id)
+        current = loaded || PlaceOS::Model::ControlSystem.find?(control_system_id)
 
         zones = current.try { |cs| Router::ControlSystem.system_zones(cs) }
         modules = current.try { |cs| Router::ControlSystem.system_modules(cs) }
@@ -74,7 +84,7 @@ module PlaceOS::Source::Router
           mappings.remove_system_modules(control_system_id)
         end
 
-        mappings.reconcile_systems({control_system_id}) if changed
+        mappings.reconcile_systems({control_system_id}) if changed && loaded.nil?
       end
 
       Resource::Result::Success

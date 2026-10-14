@@ -6,9 +6,7 @@ module PlaceOS::Source
       # the module name is a topic segment, so a rename moves the topic
       it "updates on changes to Module name" do
         state = Mappings::State.new
-        state.system_modules["mod-renamed"] = [
-          {name: "Old Name", control_system_id: "cs-1", index: 1},
-        ]
+        state.map_module("mod-renamed", {name: "Old Name", control_system_id: "cs-1", index: 1})
         mappings = Mappings.new(state)
 
         mappings.set_system_modules("cs-1", {
@@ -23,9 +21,7 @@ module PlaceOS::Source
 
       it "updates on changes to Module index" do
         state = Mappings::State.new
-        state.system_modules["mod-reindexed"] = [
-          {name: "M'Odule", control_system_id: "cs-1", index: 1},
-        ]
+        state.map_module("mod-reindexed", {name: "M'Odule", control_system_id: "cs-1", index: 1})
         mappings = Mappings.new(state)
 
         mappings.set_system_modules("cs-1", {
@@ -41,9 +37,7 @@ module PlaceOS::Source
         state = Mappings::State.new
         state.drivers["mod-gone"] = "driver-sns"
         state.drivers["mod-stays"] = "driver-sns"
-        state.system_modules["mod-gone"] = [
-          {name: "M'Odule", control_system_id: "cs-1", index: 1},
-        ]
+        state.map_module("mod-gone", {name: "M'Odule", control_system_id: "cs-1", index: 1})
         mappings = Mappings.new(state)
 
         driver = Model::Generator.driver(module_name: "mock")
