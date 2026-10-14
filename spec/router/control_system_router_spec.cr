@@ -87,6 +87,32 @@ module PlaceOS::Source
       mapping[second.id.as(String)][:index].should eq 2
     end
 
+    # the initial sync publishes everything, so the load reconciles nothing
+    it "reconciles a system changed after startup, not one loaded at startup" do
+      driver = Model::Generator.driver(module_name: "Display").save!
+      mod = Model::Generator.module(driver)
+      mod.custom_name = "Display"
+      mod.save!
+      other = Model::Generator.module(driver)
+      other.custom_name = "Display"
+      other.save!
+      cs = Model::Generator.control_system
+      cs.modules = [mod.id.as(String)]
+      cs.save!
+      mappings = Mappings.new
+      router = Router::ControlSystem.new(mappings, [] of PublisherManager)
+
+      router.sync(cs.id.as(String), cs)
+      mappings.system_modules_for(cs.id.as(String)).keys.should eq [mod.id]
+      mappings.reconcile_pending?.should be_false
+
+      cs.modules = [other.id.as(String), mod.id.as(String)]
+      cs.save!
+      router.sync(cs.id.as(String))
+      mappings.system_modules_for(cs.id.as(String)).keys.to_set.should eq Set{mod.id, other.id}
+      mappings.take_reconcile.should eq Set{mod.id, other.id}
+    end
+
     it "system_zones" do
       cs = Model::Generator.control_system
       cs.id = "cs-1245"

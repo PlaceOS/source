@@ -200,7 +200,7 @@ module PlaceOS::Source
     org_id = "org-donor",
   )
     state = Mappings::State.new
-    state.system_modules[module_id] = [{name: module_name, control_system_id: control_system_id, index: index}]
+    state.map_module(module_id, {name: module_name, control_system_id: control_system_id, index: index})
     state.drivers[module_id] = driver_id
     state.system_zones[control_system_id] = {
       "area"     => area_id,

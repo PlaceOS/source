@@ -33,6 +33,44 @@ module PlaceOS::Source
       end
     end
 
+    describe "system modules" do
+      it "keeps each system's modules apart" do
+        mappings = Mappings.new
+        mappings.set_system_modules("cs-1", {
+          "mod-a" => {name: "Display", control_system_id: "cs-1", index: 1},
+          "mod-b" => {name: "Display", control_system_id: "cs-1", index: 2},
+        })
+        mappings.set_system_modules("cs-2", {
+          "mod-a" => {name: "Screen", control_system_id: "cs-2", index: 1},
+        })
+
+        mappings.modules_in_systems({"cs-1"}).should eq Set{"mod-a", "mod-b"}
+        mappings.system_modules_for("cs-2").should eq({"mod-a" => {name: "Screen", control_system_id: "cs-2", index: 1}})
+
+        # replacing a system's modules leaves the other system's alone
+        mappings.set_system_modules("cs-1", {
+          "mod-b" => {name: "Display", control_system_id: "cs-1", index: 1},
+        })
+        mappings.modules_in_systems({"cs-1"}).should eq Set{"mod-b"}
+        mappings.read(&.system_modules["mod-a"]).should eq [{name: "Screen", control_system_id: "cs-2", index: 1}]
+
+        mappings.remove_system_modules("cs-2")
+        mappings.read(&.system_modules.has_key?("mod-a")).should be_false
+        mappings.system_modules_for("cs-2").should be_empty
+      end
+
+      it "forgets a deleted module in every system" do
+        mappings = Mappings.new
+        mappings.set_system_modules("cs-1", {"mod-a" => {name: "Display", control_system_id: "cs-1", index: 1}})
+        mappings.set_system_modules("cs-2", {"mod-a" => {name: "Display", control_system_id: "cs-2", index: 1}})
+
+        mappings.write(&.unmap_module("mod-a"))
+
+        mappings.modules_in_systems({"cs-1", "cs-2"}).should be_empty
+        mappings.read(&.system_module_ids).should be_empty
+      end
+    end
+
     describe "hierarchy_zones" do
       it "gets scope zones for ControlSystem" do
         Model::ControlSystem.clear

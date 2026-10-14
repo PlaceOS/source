@@ -64,5 +64,18 @@ module PlaceOS::Source
       message.data.should eq Mappings::Metadata.new("hello", "org")
       message.payload.should eq payload.to_json
     end
+
+    # the topic is the scope, so a second top-level zone would publish it twice
+    it "publishes once however many top-level zones there are" do
+      zones = Array.new(2) do
+        zone = Model::Generator.zone
+        zone.tags = Set{Mappings.scope}
+        zone
+      end
+      router = Dummy.new
+      router.publish_metadata(zones, MockModel.new(id: "hello", some_data: "edkh"))
+
+      router.@publisher_managers.first.messages.size.should eq 1
+    end
   end
 end

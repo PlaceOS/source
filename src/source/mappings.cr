@@ -45,7 +45,7 @@ module PlaceOS::Source
       ids = control_system_ids.to_set
       return if ids.empty?
       reconcile(
-        modules_in_systems(ids) | published.module_ids { |event| ids.includes?(event.control_system_id) }
+        modules_in_systems(ids) | published.module_ids_in(ids)
       )
     end
 
@@ -64,10 +64,9 @@ module PlaceOS::Source
 
     # Modules mapped into any of `control_system_ids` now
     def modules_in_systems(control_system_ids : Enumerable(String)) : Set(String)
-      ids = control_system_ids.to_set
       read do |state|
-        state.system_modules.each_with_object(Set(String).new) do |(module_id, mappings), found|
-          found << module_id if mappings.any? { |mapping| ids.includes?(mapping[:control_system_id]) }
+        control_system_ids.each_with_object(Set(String).new) do |control_system_id, found|
+          state.system_module_ids[control_system_id]?.try { |ids| found.concat(ids) }
         end
       end
     end
@@ -218,10 +217,10 @@ module PlaceOS::Source
     def set_system_modules(control_system_id : String, system_modules : Hash(String, SystemModule))
       write do |state|
         # Clear mappings of all references to control_system_id
-        remove_system_modules(control_system_id)
+        state.unmap_system(control_system_id)
 
         system_modules.each do |module_id, new_mapping|
-          state.system_modules[module_id] << new_mapping
+          state.map_module(module_id, new_mapping)
         end
       end
     end
@@ -232,20 +231,19 @@ module PlaceOS::Source
     # its own, and `RWLock` allows nested reads
     def system_modules_for(control_system_id : String) : Hash(String, SystemModule)
       read do |state|
-        state.system_modules.each_with_object({} of String => SystemModule) do |(module_id, list), found|
-          list.each { |mapping| found[module_id] = mapping if mapping[:control_system_id] == control_system_id }
+        found = {} of String => SystemModule
+        state.system_module_ids[control_system_id]?.try &.each do |module_id|
+          state.system_modules[module_id]?.try &.each do |mapping|
+            found[module_id] = mapping if mapping[:control_system_id] == control_system_id
+          end
         end
+        found
       end
     end
 
     # Remove System Module Mappings
     def remove_system_modules(control_system_id : String)
-      # Clear mappings of all references to control_system_id
-      write do |state|
-        state.system_modules.transform_values! do |mappings|
-          mappings.reject! { |sys_mod| sys_mod[:control_system_id] == control_system_id }
-        end
-      end
+      write(&.unmap_system(control_system_id))
     end
 
     # Mappings
@@ -258,7 +256,18 @@ module PlaceOS::Source
       include JSON::Serializable
 
       # module_id => [{control_system_id: String, index: Int32}]
-      getter system_modules : Hash(String, Array(SystemModule)) = Hash(String, Array(SystemModule)).new { |h, k| h[k] = [] of SystemModule }
+      #
+      # NOTE:: change it through `map_module`, `unmap_system` and
+      # `unmap_module`, which keep `system_module_ids` in step with it
+      getter system_modules : Hash(String, Array(SystemModule)) = Hash(String, Array(SystemModule)).new
+
+      # control_system_id => the module_ids mapped in it.
+      #
+      # The reverse of `system_modules`, so working on one system does not
+      # mean scanning every Module. Systems are mapped one at a time as the
+      # routers load, so a scan per system made startup quadratic
+      @[JSON::Field(ignore: true)]
+      getter system_module_ids : Hash(String, Set(String)) = Hash(String, Set(String)).new
 
       # module_id => driver_id
       getter drivers : Hash(String, String) = {} of String => String
@@ -267,6 +276,30 @@ module PlaceOS::Source
       getter system_zones : Hash(String, Hash(String, String)) = {} of String => Hash(String, String)
 
       def initialize
+      end
+
+      def map_module(module_id : String, mapping : SystemModule) : Nil
+        (system_modules[module_id] ||= [] of SystemModule) << mapping
+        (system_module_ids[mapping[:control_system_id]] ||= Set(String).new) << module_id
+      end
+
+      def unmap_system(control_system_id : String) : Nil
+        return unless module_ids = system_module_ids.delete(control_system_id)
+        module_ids.each do |module_id|
+          next unless list = system_modules[module_id]?
+          list.reject! { |mapping| mapping[:control_system_id] == control_system_id }
+          system_modules.delete(module_id) if list.empty?
+        end
+      end
+
+      def unmap_module(module_id : String) : Nil
+        return unless list = system_modules.delete(module_id)
+        list.each do |mapping|
+          control_system_id = mapping[:control_system_id]
+          next unless ids = system_module_ids[control_system_id]?
+          ids.delete(module_id)
+          system_module_ids.delete(control_system_id) if ids.empty?
+        end
       end
     end
 
