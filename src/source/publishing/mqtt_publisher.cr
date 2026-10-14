@@ -199,13 +199,28 @@ module PlaceOS::Source
     # The status topics the broker currently retains, as a client connecting
     # now would be handed them, that `keep` returns true for. Each topic is
     # passed to `keep` as it arrives, so only those wanted are held.
+    def retained_state_topics(quiet : Time::Span = 2.seconds, limit : Time::Span = 2.minutes, &keep : String -> Bool) : Set(String)
+      retained_topics(File.join(MQTT_NAMESPACE, "+", "state", "#"), quiet, limit, &keep)
+    end
+
+    # The topics under `filter` the broker currently retains, that `keep`
+    # returns true for, up to `max` of them.
     #
     # The broker sends retained messages straight after it acknowledges the
-    # subscription, so collection ends once `quiet` passes without one, or at
-    # `limit` regardless. Only retained messages count: a live publication
-    # arriving meanwhile is not part of what was there.
-    def retained_state_topics(quiet : Time::Span = 2.seconds, limit : Time::Span = 2.minutes, &keep : String -> Bool) : Set(String)
-      filter = File.join(MQTT_NAMESPACE, "+", "state", "#")
+    # subscription, so collection ends once `quiet` passes without one, at
+    # `limit`, or once `max` are held. Only retained messages count: a live
+    # publication arriving meanwhile is not part of what was there.
+    #
+    # NOTE:: the broker drops what a client's outgoing queue cannot hold
+    # (`max_queued_messages`), so on a large broker this can be part of what is
+    # retained. Repeat it to see the rest once those found are dealt with
+    def retained_topics(
+      filter : String,
+      quiet : Time::Span = 2.seconds,
+      limit : Time::Span = 2.minutes,
+      max : Int32 = Int32::MAX,
+      &keep : String -> Bool
+    ) : Set(String)
       topics = Set(String).new
       lock = Mutex.new
       last = Time.instant
@@ -214,7 +229,7 @@ module PlaceOS::Source
         next unless retained && !payload.empty?
         wanted = keep.call(topic)
         lock.synchronize do
-          topics << topic if wanted
+          topics << topic if wanted && topics.size < max
           last = Time.instant
         end
       end
@@ -224,7 +239,7 @@ module PlaceOS::Source
         loop do
           sleep 100.milliseconds
           now = Time.instant
-          break if lock.synchronize { now - last >= quiet } || now - started >= limit
+          break if lock.synchronize { now - last >= quiet || topics.size >= max } || now - started >= limit
         end
       ensure
         client.unsubscribe(filter) rescue nil

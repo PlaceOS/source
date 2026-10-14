@@ -23,7 +23,10 @@ module PlaceOS::Source
     private getter publisher_managers : Array(PublisherManager)
 
     private property? stopped : Bool = true
-    private property? initial_sync_complete : Bool = false
+    getter? initial_sync_complete : Bool = false
+
+    private def initial_sync_complete=(@initial_sync_complete : Bool)
+    end
 
     private getter sync_lock = Mutex.new(:reentrant)
 
@@ -145,7 +148,7 @@ module PlaceOS::Source
       # delete would then remove a value that is still live
       await_deletions
 
-      Log.info { "resyncing state for new broker connection" }
+      Log.info { "resyncing state" }
 
       mods_mapped = 0_u64
       status_updated = 0_u64
@@ -201,21 +204,27 @@ module PlaceOS::Source
       end
     end
 
+    # Held for each step of processing, so `clear_retained` can hold
+    # processing back: what it clears must not be published again meanwhile
+    private getter process_lock = Mutex.new
+
     protected def process_events
       until stopped?
         begin
-          # Mapping changes first: a batch built after them must be published
-          # against what is retained once they are reconciled
-          reconcile_now(mappings.take_reconcile) if mappings.reconcile_pending?
-          if sweep = take_sweep
-            sweep_now(sweep[0], sweep[1], sweep[0].broker.id.to_s)
+          batch = process_lock.synchronize do
+            # Mapping changes first: a batch built after them must be published
+            # against what is retained once they are reconciled
+            reconcile_now(mappings.take_reconcile) if mappings.reconcile_pending?
+            if sweep = take_sweep
+              sweep_now(sweep[0], sweep[1], sweep[0].broker.id.to_s)
+            end
+
+            build_batch.tap { |events| process_batch(events) unless events.empty? }
           end
 
-          batch = build_batch
           if batch.empty?
             sleep PROCESSING_INTERVAL
           else
-            process_batch(batch)
             Fiber.yield
 
             # This outputs how many writes have occured for each publisher
@@ -457,6 +466,49 @@ module PlaceOS::Source
         end
       end
       keys.includes?(topic)
+    end
+
+    # Clearing
+    ###########################################################################
+
+    # Topics a round of `clear_retained` takes from a broker. Below the
+    # broker's queue (`max_queued_messages`) so a round is not cut short by it
+    CLEAR_BATCH = 5_000
+
+    # Removes everything source publishes from every MQTT broker: all `state`
+    # and `metadata` topics, whether or not anything maps to them. Returns how
+    # many topics were removed.
+    #
+    # Event processing is held back throughout, so nothing is published again
+    # while it runs; events that arrive wait, and are processed afterwards.
+    # Nothing is retained once it returns, so a resync must follow it.
+    #
+    # NOTE:: in rounds. A round takes up to `CLEAR_BATCH` topics, removes them
+    # and waits for the removals to reach the broker, so the next subscription
+    # is handed what is left. It ends when a round finds nothing, so it is
+    # complete even when the broker drops part of what it sends a client
+    def clear_retained(batch : Int32 = CLEAR_BATCH) : Int64
+      cleared = 0_i64
+      process_lock.synchronize do
+        publisher_managers.each do |manager|
+          next unless manager.is_a?(MqttBrokerManager)
+          manager.publishers.each do |publisher|
+            {"state", "metadata"}.each do |kind|
+              filter = File.join(MQTT_NAMESPACE, "+", kind, "#")
+              loop do
+                topics = publisher.retained_topics(filter, max: batch) { true }
+                break if topics.empty?
+                topics.each { |topic| publisher.queue_delete_topic(topic) }
+                await_deletions
+                cleared += topics.size
+              end
+            end
+          end
+        end
+        mappings.published.clear
+      end
+      Log.info { {message: "cleared retained state and metadata", removed: cleared.to_s} }
+      cleared
     end
 
     def self.parse_channel(channel : String) : {String, String}

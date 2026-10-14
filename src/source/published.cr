@@ -44,6 +44,14 @@ module PlaceOS::Source
       end
     end
 
+    # Forget everything, once nothing is retained any more
+    def clear : Nil
+      lock.synchronize do
+        events.clear
+        by_system.clear
+      end
+    end
+
     def for_module(module_id : String) : Set(Mappings::Status)
       lock.synchronize { events[module_id]?.try(&.dup) || Set(Mappings::Status).new }
     end

@@ -141,6 +141,25 @@ module PlaceOS::Source
 
     alias Data = Status | Metadata
 
+    # Every row of a model, a page at a time, in primary key order
+    def self.each_model(model : T.class, page_size : Int32 = 64, & : T ->) forall T
+      last_id = nil
+      loop do
+        query = model.order(id: :asc)
+        query = query.where("id > ?", last_id) unless last_id.nil?
+        page = query.limit(page_size).to_a
+        page.each { |row| yield row }
+        break if page.size < page_size
+        last_id = page.last.id
+        break if last_id.nil?
+      end
+    end
+
+    # Systems with a top-level zone, whose models are published
+    def scoped_system?(control_system_id : String) : Bool
+      read { |state| !!state.system_zones[control_system_id]?.try(&.has_key?(Mappings.scope)) }
+    end
+
     # Hierarchy and Scoping
     ###########################################################################
 

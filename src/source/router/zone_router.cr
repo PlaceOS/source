@@ -47,6 +47,18 @@ module PlaceOS::Source::Router
       end
     end
 
+    # Publishes the metadata of every Zone in scope again
+    def republish_metadata : Int32
+      count = 0
+      Mappings.each_model(PlaceOS::Model::Zone) do |zone|
+        hierarchy_zones = Mappings.hierarchy_zones(zone)
+        next if hierarchy_zones.empty?
+        publish_metadata(hierarchy_zones, zone)
+        count += 1
+      end
+      count
+    end
+
     # Handle a change to a Zone's tags, or its removal.
     #
     # Only systems that have the zone are touched. Every system's mapping used

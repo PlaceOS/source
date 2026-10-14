@@ -49,5 +49,20 @@ module PlaceOS::Source
 
       manager.stop
     end
+
+    describe "resync" do
+      it "runs one at a time" do
+        manager = Manager.new([] of PublisherManager)
+        manager.resync_status.state.idle?.should be_true
+
+        # never started, so it waits on the initial sync and stays running
+        manager.resync(clear: true).should be_true
+        manager.resync.should be_false
+        status = manager.resync_status
+        status.state.clearing?.should be_true
+        status.clear?.should be_true
+        status.started_at.should_not be_nil
+      end
+    end
   end
 end
