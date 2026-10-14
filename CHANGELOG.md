@@ -1,3 +1,9 @@
+## v1.23.0 (2026-10-14)
+
+### Feat
+
+- **api**: clear and resync the MQTT brokers on request ([#67](https://github.com/PlaceOS/source/pull/67))
+
 ## v1.22.2 (2026-10-14)
 
 ### Fix
