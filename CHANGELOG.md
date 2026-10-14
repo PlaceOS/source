@@ -1,4 +1,8 @@
-## Unreleased
+## v1.22.1 (2026-10-14)
+
+### Fix
+
+- **mqtt**: keep retained state topics accurate ([#65](https://github.com/PlaceOS/source/pull/65))
 
 ## v1.22.0 (2026-08-11)
 
