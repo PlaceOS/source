@@ -1,3 +1,9 @@
+## v1.22.2 (2026-10-14)
+
+### Fix
+
+- **mqtt**: keep startup memory and time flat on large estates ([#66](https://github.com/PlaceOS/source/pull/66))
+
 ## v1.22.1 (2026-10-14)
 
 ### Fix
