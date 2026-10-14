@@ -34,22 +34,23 @@ RUN shards install --production --ignore-crystal-version --skip-postinstall --sk
 COPY src /app/src
 
 # Build application
+# -no-pie: backtraces of a static PIE binary can't be resolved, they print `from ???`
 # -Devloop=libevent: the native epoll event loop corrupts its timers under load
 # (crystal-lang/crystal#17058)
 RUN UNAME_AT_COMPILE_TIME=true \
     PLACE_COMMIT=$PLACE_COMMIT \
     PLACE_VERSION=$PLACE_VERSION \
-    shards build --production --error-trace --static -Devloop=libevent
+    shards build --production --error-trace --static --link-flags=-no-pie -Devloop=libevent
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-# Extract binary dependencies
+# Extract binary dependencies, a fully static binary has none (ldd exits 1)
 RUN mkdir deps
 RUN for binary in /app/bin/*; do \
-        ldd "$binary" | \
+        { ldd "$binary" || true; } | \
         tr -s '[:blank:]' '\n' | \
-        grep '^/' | \
-        xargs -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
+        { grep '^/' || true; } | \
+        xargs -r -I % sh -c 'mkdir -p $(dirname deps%); cp % deps%;'; \
     done
 
 # Build a minimal docker image
