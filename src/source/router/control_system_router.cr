@@ -96,6 +96,18 @@ module PlaceOS::Source::Router
       Resource::Result::Success
     end
 
+    # Publishes the metadata of every system in scope again. Scope is read
+    # from the mappings, which hold every system's hierarchy
+    def republish_metadata : Int32
+      count = 0
+      Mappings.each_model(PlaceOS::Model::ControlSystem) do |control_system|
+        next unless mappings.scoped_system?(control_system.id.as(String))
+        publish_metadata(control_system)
+        count += 1
+      end
+      count
+    end
+
     def process_resource(action : Resource::Action, resource : PlaceOS::Model::ControlSystem) : Resource::Result
       control_system = resource
 

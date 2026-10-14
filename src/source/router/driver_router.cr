@@ -62,6 +62,18 @@ module PlaceOS::Source::Router
     @loaded_in_scope : Set(String)? = nil
     private getter loaded_in_scope_lock = Mutex.new
 
+    # Publishes the metadata of every Driver in scope again
+    def republish_metadata : Int32
+      scoped = drivers_in_scope
+      count = 0
+      Mappings.each_model(PlaceOS::Model::Driver) do |driver|
+        next unless scoped.includes?(driver.id.as(String))
+        publish_metadata(driver)
+        count += 1
+      end
+      count
+    end
+
     # The Drivers with a Module in a system under a top-level zone, from the
     # mappings, which hold every system and Module by the time Drivers load.
     #
@@ -69,14 +81,19 @@ module PlaceOS::Source::Router
     # Module of each Driver, then each Module's systems and their zones
     private def loaded_in_scope : Set(String)
       loaded_in_scope_lock.synchronize do
-        @loaded_in_scope ||= mappings.read do |state|
-          state.drivers.each_with_object(Set(String).new) do |(module_id, driver_id), found|
-            next if found.includes?(driver_id)
-            scoped = state.system_modules[module_id]?.try &.any? do |mapping|
-              state.system_zones[mapping[:control_system_id]]?.try(&.has_key?(Mappings.scope))
-            end
-            found << driver_id if scoped
+        @loaded_in_scope ||= drivers_in_scope
+      end
+    end
+
+    # Drivers with a Module in a system under a top-level zone
+    private def drivers_in_scope : Set(String)
+      mappings.read do |state|
+        state.drivers.each_with_object(Set(String).new) do |(module_id, driver_id), found|
+          next if found.includes?(driver_id)
+          scoped = state.system_modules[module_id]?.try &.any? do |mapping|
+            state.system_zones[mapping[:control_system_id]]?.try(&.has_key?(Mappings.scope))
           end
+          found << driver_id if scoped
         end
       end
     end

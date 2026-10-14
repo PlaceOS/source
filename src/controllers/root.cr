@@ -31,6 +31,30 @@ module PlaceOS::Source::Api
       )
     end
 
+    # Publishes everything to the MQTT brokers again: every module's state and
+    # every model's metadata. With `clear`, everything source publishes is
+    # removed from the brokers first, for when what they hold has drifted.
+    #
+    # Runs in the background: 202 once started, 409 while one is running.
+    # Progress is at `GET /resync`
+    @[AC::Route::POST("/resync", status_code: HTTP::Status::ACCEPTED)]
+    def resync(
+      @[AC::Param::Info(description: "remove everything source publishes from the brokers first", example: "true")]
+      clear : Bool = false,
+    ) : Manager::ResyncStatus
+      manager = Manager.instance
+      unless manager.resync(clear)
+        render status: :conflict, json: manager.resync_status
+      end
+      manager.resync_status
+    end
+
+    # Where the last resync got to
+    @[AC::Route::GET("/resync")]
+    def resync_status : Manager::ResyncStatus
+      Manager.instance.resync_status
+    end
+
     def self.healthcheck : NamedTuple(healthy: Bool, services: Hash(String, NamedTuple(status: String, error: String?)))
       results = Promise.all(
         Promise.defer {
