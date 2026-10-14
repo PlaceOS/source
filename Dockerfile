@@ -34,10 +34,12 @@ RUN shards install --production --ignore-crystal-version --skip-postinstall --sk
 COPY src /app/src
 
 # Build application
+# -Devloop=libevent: the native epoll event loop corrupts its timers under load
+# (crystal-lang/crystal#17058)
 RUN UNAME_AT_COMPILE_TIME=true \
     PLACE_COMMIT=$PLACE_COMMIT \
     PLACE_VERSION=$PLACE_VERSION \
-    shards build --production --error-trace --static
+    shards build --production --error-trace --static -Devloop=libevent
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
