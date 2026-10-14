@@ -24,13 +24,18 @@ module PlaceOS::Source::Router
       driver = resource
       driver_id = driver.id.as(String)
 
+      if action.created? && !startup_finished?
+        # loading: only its metadata is published, and only if it is in scope
+        return Resource::Result::Skipped unless loaded_in_scope.includes?(driver_id)
+        publish_metadata(driver)
+        return Resource::Result::Success
+      end
+
       hierarchy_zones = Mappings.hierarchy_zones(driver)
 
       return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
 
-      hierarchy_zones.each do |zone|
-        publish_metadata(zone, driver)
-      end
+      publish_metadata(hierarchy_zones, driver)
 
       if action.deleted?
         # driver_id is a topic segment, so everything published by a Module of
@@ -47,6 +52,33 @@ module PlaceOS::Source::Router
       end
 
       Resource::Result::Success
+    end
+
+    def start(timeout : Time::Span = LOAD_TIMEOUT) : self
+      @loaded_in_scope = nil
+      super
+    end
+
+    @loaded_in_scope : Set(String)? = nil
+    private getter loaded_in_scope_lock = Mutex.new
+
+    # The Drivers with a Module in a system under a top-level zone, from the
+    # mappings, which hold every system and Module by the time Drivers load.
+    #
+    # Worked out once, for loading. Asking the database meant reading every
+    # Module of each Driver, then each Module's systems and their zones
+    private def loaded_in_scope : Set(String)
+      loaded_in_scope_lock.synchronize do
+        @loaded_in_scope ||= mappings.read do |state|
+          state.drivers.each_with_object(Set(String).new) do |(module_id, driver_id), found|
+            next if found.includes?(driver_id)
+            scoped = state.system_modules[module_id]?.try &.any? do |mapping|
+              state.system_zones[mapping[:control_system_id]]?.try(&.has_key?(Mappings.scope))
+            end
+            found << driver_id if scoped
+          end
+        end
+      end
     end
   end
 end

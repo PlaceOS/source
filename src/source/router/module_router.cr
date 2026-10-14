@@ -66,8 +66,7 @@ module PlaceOS::Source::Router
     def process_resource(action : Resource::Action, resource : Model::Module) : Resource::Result
       mod = resource
 
-      hierarchy_zones = Mappings.hierarchy_zones(mod)
-      return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
+      return Resource::Result::Skipped unless action.deleted? || in_scope?(action, mod)
 
       case action
       in .created?
@@ -76,6 +75,21 @@ module PlaceOS::Source::Router
         handle_update(mod)
       in .deleted?
         handle_delete(mod)
+      end
+    end
+
+    # Whether the Module is in a system with a hierarchy.
+    #
+    # While loading, the systems are already mapped (the ControlSystem router
+    # loads first, and maps exactly the systems with a hierarchy), so that is
+    # asked of the mappings. Asking the database meant reading each Module's
+    # systems, and each of their zones, one Module at a time
+    private def in_scope?(action : Resource::Action, mod : Model::Module) : Bool
+      if action.created? && !startup_finished?
+        module_id = mod.id.as(String)
+        mappings.read(&.system_modules.has_key?(module_id))
+      else
+        !Mappings.hierarchy_zones(mod).empty?
       end
     end
   end

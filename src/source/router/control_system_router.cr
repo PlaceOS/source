@@ -64,11 +64,17 @@ module PlaceOS::Source::Router
     # yet to take away, and their initial sync publishes every Module against
     # the mappings built here. Queueing them all would read the state of every
     # Module a second time, in one batch
-    def sync(control_system_id : String, loaded : PlaceOS::Model::ControlSystem? = nil) : Resource::Result
+    #
+    # `loaded_zones` are the system's hierarchy zones, when already read with it
+    def sync(
+      control_system_id : String,
+      loaded : PlaceOS::Model::ControlSystem? = nil,
+      loaded_zones : Array(PlaceOS::Model::Zone)? = nil,
+    ) : Resource::Result
       sync_lock.synchronize do
         current = loaded || PlaceOS::Model::ControlSystem.find?(control_system_id)
 
-        zones = current.try { |cs| Router::ControlSystem.system_zones(cs) }
+        zones = current.try { |cs| Router::ControlSystem.system_zones(cs, loaded ? loaded_zones : nil) }
         modules = current.try { |cs| Router::ControlSystem.system_modules(cs) }
 
         changed = mappings.read do |state|
@@ -100,11 +106,14 @@ module PlaceOS::Source::Router
       # while it was in scope has to go
       return Resource::Result::Skipped if hierarchy_zones.empty? && action.created?
 
-      hierarchy_zones.each { |zone| publish_metadata(zone, control_system) }
+      publish_metadata(hierarchy_zones, control_system)
 
       case action
       in .created?
-        handle_create(control_system)
+        # while loading, the zones just read are the system's hierarchy, so
+        # they are not read again to map it
+        return handle_create(control_system) if startup_finished?
+        sync(control_system.id.as(String), control_system, hierarchy_zones)
       in .updated?
         handle_update(control_system)
       in .deleted?
