@@ -6,6 +6,7 @@ require "placeos-driver/storage"
 require "./mappings"
 require "./publishing/publisher"
 require "./publishing/publisher_manager"
+require "./publishing/mqtt_broker_manager"
 
 module PlaceOS::Source
   class StatusEvents
@@ -131,6 +132,7 @@ module PlaceOS::Source
         values:  status_updated.to_s,
       } }
       self.initial_sync_complete = true
+      spawn { sweep_brokers }
     end
 
     # Trigger a state resync - useful when new brokers are added
@@ -173,6 +175,8 @@ module PlaceOS::Source
         modules: mods_mapped.to_s,
         values:  status_updated.to_s,
       } }
+
+      sweep_brokers
     end
 
     protected def handle_pevent(pattern : String, channel : String, payload : String)
@@ -200,6 +204,13 @@ module PlaceOS::Source
     protected def process_events
       until stopped?
         begin
+          # Mapping changes first: a batch built after them must be published
+          # against what is retained once they are reconciled
+          reconcile_now(mappings.take_reconcile) if mappings.reconcile_pending?
+          if sweep = take_sweep
+            sweep_now(sweep[0], sweep[1], sweep[0].broker.id.to_s)
+          end
+
           batch = build_batch
           if batch.empty?
             sleep PROCESSING_INTERVAL
@@ -252,12 +263,146 @@ module PlaceOS::Source
       } }
 
       events.try &.each do |event|
+        # what is retained follows the value: a cleared status is removed
+        if MqttPublisher.removal?(payload)
+          mappings.published.remove(event)
+        else
+          mappings.published.add(event)
+        end
+
         message = Publisher::Message.new(event, payload, timestamp)
         publisher_managers.each do |manager|
           Log.trace { "broadcasting message to #{manager.class}" }
           manager.broadcast(message)
         end
       end
+    end
+
+    # Reconciliation
+    ###########################################################################
+
+    # Brings what is retained for each Module into line with the mappings as
+    # they stand: topics that no longer apply are removed, and topics that now
+    # apply but were never published get the Module's current value.
+    #
+    # Runs in the event processing fiber, so the registry, the mappings it is
+    # compared with and the values read here cannot be overtaken by a status
+    # event: one that arrives meanwhile is processed afterwards, against the
+    # new mappings, with a value at least as new as the one read here.
+    #
+    # Public for specs; otherwise only the processing fiber calls it
+    def reconcile_now(module_ids : Set(String)) : Nil
+      return if module_ids.empty?
+
+      removals = [] of Mappings::Status
+      additions = [] of {Mappings::Status, String}
+      # topics something maps to now, which a removal must leave alone: in a
+      # reorder, Display_1 stops being one Module's and becomes another's
+      valid = Set(String).new
+
+      module_ids.each do |module_id|
+        before = mappings.published.for_module(module_id)
+        values = begin
+          PlaceOS::Driver::RedisStorage.new(module_id).to_h
+        rescue error
+          Log.warn(exception: error) { "reading state of Module<#{module_id}> to reconcile" }
+          next
+        end
+
+        after = Set(Mappings::Status).new
+        values.each_key do |status|
+          mappings.status_events?(module_id, status).try &.each { |event| after << event }
+        end
+
+        after.each do |event|
+          if key = MqttPublisher.generate_key(event)
+            valid << key
+          end
+        end
+        (before - after).each { |event| removals << event }
+        (after - before).each { |event| additions << {event, values[event.status]} }
+      end
+
+      timestamp = Time.utc
+      removals.each do |event|
+        mappings.published.remove(event)
+        key = MqttPublisher.generate_key(event)
+        next if key.nil? || valid.includes?(key)
+        message = Publisher::Message.new(event, nil, timestamp)
+        publisher_managers.each(&.broadcast_delete(message))
+      end
+
+      additions.each do |(event, payload)|
+        mappings.published.add(event)
+        message = Publisher::Message.new(event, payload, timestamp)
+        publisher_managers.each(&.broadcast(message))
+      end
+
+      unless removals.empty? && additions.empty?
+        Log.info { {
+          message: "reconciled retained state",
+          modules: module_ids.size.to_s,
+          removed: removals.size.to_s,
+          added:   additions.size.to_s,
+        } }
+      end
+    end
+
+    # Broker sweep
+    ###########################################################################
+
+    private getter sweep_lock = Mutex.new
+    @pending_sweep : {MqttPublisher, Set(String)}? = nil
+
+    # Removes every status topic a broker retains that nothing maps to.
+    #
+    # The registry of what is published starts empty, so whatever a broker
+    # held from before this process started is unaccounted for: Modules
+    # deleted or moved while source was down, or by a version of source that
+    # did not clean up after them. Once the initial sync has been processed
+    # the registry is complete, and anything else the broker holds is stale.
+    def sweep_brokers : Nil
+      # the registry is only complete once every synced event is processed
+      until stopped? || (synchronize { event_container.empty? } && !mappings.reconcile_pending?)
+        sleep 100.milliseconds
+      end
+
+      publisher_managers.each do |manager|
+        next unless manager.is_a?(MqttBrokerManager)
+        manager.publishers.each do |publisher|
+          begin
+            topics = publisher.retained_state_topics
+            sweep_lock.synchronize { @pending_sweep = {publisher, topics} }
+            # one at a time, so the processing fiber takes each in turn
+            while sweep_lock.synchronize { !@pending_sweep.nil? } && !stopped?
+              sleep 50.milliseconds
+            end
+          rescue error
+            Log.warn(exception: error) { "unable to read retained topics from Broker<#{publisher.broker.id}>, stale topics remain" }
+          end
+        end
+      end
+    end
+
+    private def take_sweep : {MqttPublisher, Set(String)}?
+      sweep_lock.synchronize do
+        sweep = @pending_sweep
+        @pending_sweep = nil
+        sweep
+      end
+    end
+
+    # Public for specs; otherwise only the processing fiber calls it
+    def sweep_now(publisher : Publisher, retained : Set(String), label : String = "") : Nil
+      valid = mappings.published.all.compact_map { |event| MqttPublisher.generate_key(event) }.to_set
+      stale = retained - valid
+      stale.each { |topic| publisher.queue_delete_topic(topic) }
+      Log.info { {
+        message:  "swept retained state",
+        broker:   label,
+        retained: retained.size.to_s,
+        removed:  stale.size.to_s,
+      } }
     end
 
     def self.parse_channel(channel : String) : {String, String}

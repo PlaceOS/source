@@ -11,16 +11,24 @@ module PlaceOS::Source
       timestamp : Time
     )
 
-    getter message_queue : Channel(Message) = Channel(Message).new(StatusEvents::BATCH_SIZE)
+    # A retained value to remove: either the key a message would publish to, or
+    # a topic by name, for one that nothing maps to any more
+    record(
+      Deletion,
+      message : Message? = nil,
+      topic : String? = nil
+    )
 
-    # Keys whose retained value has to be removed, because the topic they were
-    # published under no longer exists — a renamed or reindexed Module, or one
-    # that was destroyed.
+    # Publications and deletions, in the order they were made.
     #
-    # NOTE:: this is drained ahead of `message_queue`. A rename removes the old
-    # topic and republishes under the new one, and if the publish were to win
-    # the race the delete would take the new value straight back out again
-    getter delete_queue : Channel(Message) = Channel(Message).new(StatusEvents::BATCH_SIZE)
+    # NOTE:: ONE queue, so a deletion can never overtake a publication made
+    # before it, or be overtaken by one made after. Deletions used to have a
+    # queue of their own that was drained first, which let a removal jump ahead
+    # of a stale value still waiting to be published — the value then came
+    # back. Ordering is enough now because a deletion is only ever queued for a
+    # topic that nothing maps to (`Reconciler`), so a later publication to the
+    # same topic is, by construction, a value that belongs there
+    getter message_queue : Channel(Message | Deletion) = Channel(Message | Deletion).new(StatusEvents::BATCH_SIZE)
 
     getter processed : UInt64 = 0_u64
     getter deleted : UInt64 = 0_u64
@@ -32,8 +40,17 @@ module PlaceOS::Source
 
     # Queues removal of whatever is retained for the message's key
     def queue_delete(message : Message) : Nil
+      queue_deletion(Deletion.new(message: message))
+    end
+
+    # Queues removal of whatever is retained under `topic`
+    def queue_delete_topic(topic : String) : Nil
+      queue_deletion(Deletion.new(topic: topic))
+    end
+
+    private def queue_deletion(deletion : Deletion) : Nil
       @pending_deletes.add(1)
-      delete_queue.send(message)
+      message_queue.send(deletion)
     end
 
     abstract def publish(message : Message)
@@ -42,6 +59,10 @@ module PlaceOS::Source
     # Only meaningful where the destination retains state, so it does nothing
     # by default
     def delete(message : Message) : Nil
+    end
+
+    # Removes whatever is retained under `topic`. Nothing by default, as above
+    def delete_topic(topic : String) : Nil
     end
 
     def commit : Nil
@@ -59,27 +80,23 @@ module PlaceOS::Source
 
     def stop
       message_queue.close
-      delete_queue.close
     end
 
     private def consume_messages
       while !message_queue.closed?
-        # NOTE:: `select` makes a non-blocking pass over its branches in order,
-        # so listing deletions first is what gives them priority when both
-        # queues are ready. A rename removes the old topic and republishes
-        # under the new one, and a deletion arriving late would take the new
-        # value straight back out
         select
-        when deletion = delete_queue.receive?
-          handle_deletion(deletion) if deletion
-        when message = message_queue.receive?
-          if message
+        when item = message_queue.receive?
+          case item
+          in Message
             begin
-              publish(message)
+              publish(item)
               @processed += 1_u64
             rescue error
-              Log.warn(exception: error) { "publishing message: #{message}" }
+              Log.warn(exception: error) { "publishing message: #{item}" }
             end
+          in Deletion
+            handle_deletion(item)
+          in Nil
           end
         when timeout(10.seconds)
           # commit any buffered messages that have not been published yet
@@ -88,11 +105,15 @@ module PlaceOS::Source
       end
     end
 
-    private def handle_deletion(message : Message) : Nil
-      delete(message)
+    private def handle_deletion(deletion : Deletion) : Nil
+      if message = deletion.message
+        delete(message)
+      elsif topic = deletion.topic
+        delete_topic(topic)
+      end
       @deleted += 1_u64
     rescue error
-      Log.warn(exception: error) { "deleting retained message: #{message}" }
+      Log.warn(exception: error) { "deleting retained message: #{deletion}" }
     ensure
       @pending_deletes.sub(1)
     end

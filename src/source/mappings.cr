@@ -2,6 +2,7 @@ require "placeos-models"
 require "rwlock"
 
 require "./constants"
+require "./published"
 
 module PlaceOS::Source
   # Consolidated data object maintaining mappings
@@ -17,6 +18,67 @@ module PlaceOS::Source
     private class_getter hierarchy_set : Set(String) = HIERARCHY.to_set
 
     def initialize(@state : State = State.new)
+    end
+
+    # What is retained on the brokers, per Module. See `Published`
+    getter published : Published = Published.new
+
+    # Reconciliation
+    ###########################################################################
+
+    private getter reconcile_lock = Mutex.new
+    private getter pending_reconcile = Set(String).new
+
+    # Ask for what is retained for these Modules to be brought into line with
+    # the mappings as they now stand. Call it AFTER changing the mappings.
+    #
+    # Carried out by `StatusEvents`, in the same fiber that publishes status
+    # events, so the two can never interleave
+    def reconcile(module_ids : Enumerable(String)) : Nil
+      return if module_ids.empty?
+      reconcile_lock.synchronize { pending_reconcile.concat(module_ids) }
+    end
+
+    # As above, for every Module in these systems: those mapped there now, and
+    # those that had something published there, which may have left
+    def reconcile_systems(control_system_ids : Enumerable(String)) : Nil
+      ids = control_system_ids.to_set
+      return if ids.empty?
+      reconcile(
+        modules_in_systems(ids) | published.module_ids { |event| ids.includes?(event.control_system_id) }
+      )
+    end
+
+    # Takes the Modules waiting to be reconciled
+    def take_reconcile : Set(String)
+      reconcile_lock.synchronize do
+        taken = pending_reconcile.dup
+        pending_reconcile.clear
+        taken
+      end
+    end
+
+    def reconcile_pending? : Bool
+      reconcile_lock.synchronize { !pending_reconcile.empty? }
+    end
+
+    # Modules mapped into any of `control_system_ids` now
+    def modules_in_systems(control_system_ids : Enumerable(String)) : Set(String)
+      ids = control_system_ids.to_set
+      read do |state|
+        state.system_modules.each_with_object(Set(String).new) do |(module_id, mappings), found|
+          found << module_id if mappings.any? { |mapping| ids.includes?(mapping[:control_system_id]) }
+        end
+      end
+    end
+
+    # Systems whose hierarchy includes `zone_id` now
+    def systems_in_zone(zone_id : String) : Set(String)
+      read do |state|
+        state.system_zones.each_with_object(Set(String).new) do |(control_system_id, zones), found|
+          found << control_system_id if zones.values.includes?(zone_id)
+        end
+      end
     end
 
     # State Keys
@@ -64,18 +126,6 @@ module PlaceOS::Source
             )
           end
         end
-      end
-    end
-
-    # Every status topic currently mapped for a Module.
-    #
-    # Called *before* a mapping is rewritten, so the caller gets the topics as
-    # they exist right now — the ones that have to be removed once the Module
-    # moves or goes away. The statuses themselves come from the Module's
-    # storage, the same source a state resync reads
-    def current_status_events(module_id : String, statuses : Enumerable(String)) : Array(Status)
-      statuses.flat_map do |status|
-        status_events?(module_id, status) || [] of Status
       end
     end
 
@@ -172,6 +222,18 @@ module PlaceOS::Source
 
         system_modules.each do |module_id, new_mapping|
           state.system_modules[module_id] << new_mapping
+        end
+      end
+    end
+
+    # The module mappings of one system, as they stand
+    #
+    # NOTE:: call with the mappings lock held or not; it takes a read lock of
+    # its own, and `RWLock` allows nested reads
+    def system_modules_for(control_system_id : String) : Hash(String, SystemModule)
+      read do |state|
+        state.system_modules.each_with_object({} of String => SystemModule) do |(module_id, list), found|
+          list.each { |mapping| found[module_id] = mapping if mapping[:control_system_id] == control_system_id }
         end
       end
     end

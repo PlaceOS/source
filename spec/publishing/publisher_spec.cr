@@ -13,28 +13,35 @@ module PlaceOS::Source
     def delete(message : Publisher::Message)
       handled << "delete:#{message.payload}"
     end
+
+    def delete_topic(topic : String)
+      handled << "delete-topic:#{topic}"
+    end
   end
 
   describe Publisher do
-    # A rename removes the old topic and republishes under the new one. If a
-    # publish were to win that race the delete would take the new value straight
-    # back out, so deletions have to be drained first
-    it "drains queued deletions before queued messages" do
+    # One queue for both, so a deletion can never overtake a stale value
+    # queued before it, nor be overtaken by a value queued after it
+    it "works through publications and deletions in the order they were queued" do
       publisher = RecordingPublisher.new
       event = Mappings::Metadata.new("mod-1234", "hello")
 
-      # queued messages first, deletions second — order of arrival must not
-      # decide order of work
-      3.times { |i| publisher.message_queue.send(Publisher::Message.new(event, "message-#{i}", Time.utc)) }
-      2.times { |i| publisher.queue_delete(Publisher::Message.new(event, "deletion-#{i}", Time.utc)) }
+      publisher.message_queue.send(Publisher::Message.new(event, "message-0", Time.utc))
+      publisher.queue_delete(Publisher::Message.new(event, "deletion-0", Time.utc))
+      publisher.message_queue.send(Publisher::Message.new(event, "message-1", Time.utc))
+      publisher.queue_delete_topic("placeos/org/state/stale")
 
       publisher.start
       sleep 200.milliseconds
 
-      publisher.handled.first(2).should eq ["delete:deletion-0", "delete:deletion-1"]
-      publisher.handled.size.should eq 5
+      publisher.handled.should eq [
+        "publish:message-0",
+        "delete:deletion-0",
+        "publish:message-1",
+        "delete-topic:placeos/org/state/stale",
+      ]
       publisher.deleted.should eq 2
-      publisher.processed.should eq 3
+      publisher.processed.should eq 2
       publisher.stop
     end
 
@@ -53,7 +60,7 @@ module PlaceOS::Source
     end
 
     # a consumer must notice a closed queue rather than spinning on it
-    it "stops cleanly once the queues are closed" do
+    it "stops cleanly once the queue is closed" do
       publisher = RecordingPublisher.new
       publisher.start
       sleep 50.milliseconds
@@ -67,7 +74,6 @@ module PlaceOS::Source
       select
       when done.receive
         publisher.message_queue.closed?.should be_true
-        publisher.delete_queue.closed?.should be_true
       when timeout(5.seconds)
         fail "stop did not return"
       end

@@ -63,6 +63,30 @@ module PlaceOS::Source
       })
     end
 
+    # a Module's index is its position in the system, not in the database
+    it "numbers modules in the system's order" do
+      driver = Model::Generator.driver(module_name: "Display").save!
+      first = Model::Generator.module(driver)
+      first.custom_name = "Display"
+      first.save!
+      second = Model::Generator.module(driver)
+      second.custom_name = "Display"
+      second.save!
+
+      cs = Model::Generator.control_system
+      cs.modules = [second.id.as(String), first.id.as(String)]
+      cs.save!
+
+      mapping = Router::ControlSystem.system_modules(cs)
+      mapping[second.id.as(String)][:index].should eq 1
+      mapping[first.id.as(String)][:index].should eq 2
+
+      cs.modules = [first.id.as(String), second.id.as(String)]
+      mapping = Router::ControlSystem.system_modules(cs)
+      mapping[first.id.as(String)][:index].should eq 1
+      mapping[second.id.as(String)][:index].should eq 2
+    end
+
     it "system_zones" do
       cs = Model::Generator.control_system
       cs.id = "cs-1245"

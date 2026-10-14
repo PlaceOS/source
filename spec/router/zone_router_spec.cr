@@ -41,6 +41,24 @@ module PlaceOS::Source
       mapping.should eq({"org" => "zone-org", "building" => "zone-retagged"})
     end
 
+    # it used to be added to the hierarchy of every system, moving all their topics
+    it "leaves systems without the Zone alone when it is retagged" do
+      Model::Zone.clear
+
+      zone = Model::Generator.zone
+      zone.id = "zone-retagged"
+      zone.tags = Set{"building"}
+
+      state = Mappings::State.new
+      state.system_zones["cs-elsewhere"] = {"org" => "zone-org", "building" => "zone-other"}
+      mappings = Mappings.new(state)
+
+      Router::Zone.new(mappings, [] of PublisherManager).update_zone_mapping(zone)
+
+      mapping = mappings.read { |current| current.system_zones["cs-elsewhere"] }
+      mapping.should eq({"org" => "zone-org", "building" => "zone-other"})
+    end
+
     it "removes a Zone from system_zones when it is destroyed" do
       Model::Zone.clear
 

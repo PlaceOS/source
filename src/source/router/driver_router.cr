@@ -2,7 +2,6 @@ require "placeos-models/driver"
 require "placeos-resource"
 
 require "../mappings"
-require "./module_router"
 require "../publishing/publish_metadata"
 require "../publishing/publisher_manager"
 
@@ -40,13 +39,11 @@ module PlaceOS::Source::Router
           state.drivers.compact_map { |mod_id, id| mod_id if id == driver_id }
         end
 
-        module_router = Router::Module.new(mappings, publisher_managers)
-        module_ids.each { |mod_id| module_router.remove_retained_state(mod_id) }
-
         mappings.write do |state|
           # Remove references to this Driver
           state.drivers.reject! { |_, id| id == driver_id }
         end
+        mappings.reconcile(module_ids)
       end
 
       Resource::Result::Success
