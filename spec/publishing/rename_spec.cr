@@ -38,26 +38,22 @@ module PlaceOS::Source
     broker = PlaceOS::Source.isolated_broker
     publisher = MqttPublisher.new(broker)
     manager = MockBrokerManager.new(publisher)
-    router = Router::Module.new(mappings, [manager] of PublisherManager)
+    status_events = StatusEvents.new(mappings, [manager] of PublisherManager)
 
     begin
       publisher.start
 
-      # state as it was, under the old path
-      publisher.publish(Publisher::Message.new(
-        mappings.status_events?(module_id, status).not_nil!.first, "true", Time.utc))
+      # state as it was, under the old path: reconciling a Module with nothing
+      # published yet publishes what its storage holds
+      status_events.reconcile_now(Set{module_id})
       sleep 300.milliseconds
 
-      # the rename: clear what is there, then rewrite the mapping
-      router.remove_retained_state(module_id)
+      # the rename rewrites the mapping, then reconciles
       mappings.set_system_modules("cs-1", {
         module_id => {name: new_name, control_system_id: "cs-1", index: new_index},
       })
       new_topic = topic_for(mappings, module_id, status)
-
-      # republish at the new path, which is what a resync does
-      publisher.message_queue.send(Publisher::Message.new(
-        mappings.status_events?(module_id, status).not_nil!.first, "true", Time.utc))
+      status_events.reconcile_now(Set{module_id})
       sleep 800.milliseconds
 
       {old_topic, new_topic}

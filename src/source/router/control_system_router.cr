@@ -25,34 +25,57 @@ module PlaceOS::Source::Router
       super()
     end
 
-    # - Create a system_zones mapping
-    # - Create a system_modules mapping
+    # Events are processed concurrently and in no particular order: pg-orm and
+    # `Resource` each handle every change on a fiber of its own. So two quick
+    # edits to one system can be handled newest first, and an event's own copy
+    # of the system, and its `*_changed?` flags, cannot be trusted to be the
+    # latest. Each event instead takes this lock, reads the system as it is
+    # now, and rebuilds its mappings from that: whichever runs last leaves
+    # them matching the database
+    private getter sync_lock = Mutex.new
+
     def handle_create(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
-      zone_mappings(control_system)
-      module_mappings(control_system)
-
-      Resource::Result::Success
+      sync(control_system.id.as(String))
     end
 
-    # - Create a system_zones mapping if zones have changed
-    # - Update system_modules mapping if modules have changed
     def handle_update(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
-      zone_mappings(control_system) if control_system.zones_changed?
-      module_mappings(control_system) if control_system.modules_changed?
-
-      Resource::Result::Success
+      sync(control_system.id.as(String))
     end
 
-    # - Remove system_modules references to ControlSystem
-    # - Remove system_zones for ControlSystem
     def handle_delete(control_system : PlaceOS::Model::ControlSystem) : Resource::Result
-      control_system_id = control_system.id.as(String)
+      sync(control_system.id.as(String))
+    end
 
-      mappings.write do |state|
-        state.system_zones.delete(control_system_id)
+    # Brings the mappings for a system into line with the database, and has
+    # what is retained for it reconciled if they changed.
+    #
+    # Zones are topic segments, and a module's index is its position among the
+    # system's modules of the same name, so a change to either moves topics.
+    # Reconciling removes the old ones and publishes current values at the new
+    # ones — which also covers a module whose state was written before the
+    # system mapped it, and so was published nowhere
+    def sync(control_system_id : String) : Resource::Result
+      sync_lock.synchronize do
+        current = PlaceOS::Model::ControlSystem.find?(control_system_id)
+
+        zones = current.try { |cs| Router::ControlSystem.system_zones(cs) }
+        modules = current.try { |cs| Router::ControlSystem.system_modules(cs) }
+
+        changed = mappings.read do |state|
+          state.system_zones[control_system_id]? != zones ||
+            mappings.system_modules_for(control_system_id) != (modules || {} of String => Mappings::SystemModule)
+        end
+
+        if zones && modules
+          mappings.write { |state| state.system_zones[control_system_id] = zones }
+          mappings.set_system_modules(control_system_id, modules)
+        else
+          mappings.write { |state| state.system_zones.delete(control_system_id) }
+          mappings.remove_system_modules(control_system_id)
+        end
+
+        mappings.reconcile_systems({control_system_id}) if changed
       end
-
-      mappings.remove_system_modules(control_system_id)
 
       Resource::Result::Success
     end
@@ -62,7 +85,10 @@ module PlaceOS::Source::Router
 
       hierarchy_zones = Mappings.hierarchy_zones(control_system)
 
-      return Resource::Result::Skipped if hierarchy_zones.empty? && !action.deleted?
+      # NOTE:: an update is processed even when the system is in no scoped zone
+      # any more: it may have just been moved out of one, and what it published
+      # while it was in scope has to go
+      return Resource::Result::Skipped if hierarchy_zones.empty? && action.created?
 
       hierarchy_zones.each { |zone| publish_metadata(zone, control_system) }
 
@@ -74,26 +100,6 @@ module PlaceOS::Source::Router
       in .deleted?
         handle_delete(control_system)
       end
-    end
-
-    # Create/update a mapping for ControlSystem's Zones
-    def zone_mappings(control_system : PlaceOS::Model::ControlSystem)
-      system_zone_mappings = Router::ControlSystem.system_zones(control_system)
-
-      mappings.write do |state|
-        state.system_zones[control_system.id.as(String)] = system_zone_mappings
-      end
-
-      system_zone_mappings
-    end
-
-    # Create/update mappings for ControlSystem's Modules
-    def module_mappings(control_system : PlaceOS::Model::ControlSystem)
-      system_module_mappings = Router::ControlSystem.system_modules(control_system)
-
-      mappings.set_system_modules(control_system.id.as(String), system_module_mappings)
-
-      system_module_mappings
     end
 
     def self.system_zones(control_system : PlaceOS::Model::ControlSystem, zones : Array(PlaceOS::Model::Zone)? = nil) : Hash(String, String)
@@ -149,10 +155,17 @@ module PlaceOS::Source::Router
       PlaceOS::Model::Zone.find_all(zone_list)
     end
 
-    # Get modules
+    # Get modules, in the system's order.
+    #
+    # NOTE:: the order is load-bearing: a Module's index is its position among
+    # the system's Modules of the same name. `find_all` returns rows in
+    # whatever order the database does, so indexes used to follow the Module
+    # ids rather than the system, and reordering a system changed nothing that
+    # was published
     protected def self._system_modules(control_system : PlaceOS::Model::ControlSystem)
       module_ids = control_system.modules || [] of String
-      PlaceOS::Model::Module.find_all(module_ids)
+      found = PlaceOS::Model::Module.find_all(module_ids).to_h { |mod| {mod.id.as(String), mod} }
+      module_ids.compact_map { |id| found[id]? }
     end
   end
 end

@@ -36,6 +36,11 @@ module PlaceOS::Source
       end
     end
 
+    # The publishers as they are now, one per Broker
+    def publishers : Array(MqttPublisher)
+      read_publishers(&.values.dup)
+    end
+
     def deletes_pending? : Bool
       read_publishers do |publishers|
         publishers.values.any?(&.deletes_pending?)
@@ -72,12 +77,17 @@ module PlaceOS::Source
 
     # Create a `MqttPublisher` for the `Broker`
     #
-    protected def create_publisher(broker : Model::Broker) : Resource::Result
+    protected def create_publisher(broker : Model::Broker, retry : Bool = true) : Resource::Result
       broker_id = broker.id.as(String)
       begin
         publisher = MqttPublisher.new(broker)
-      rescue e : IO::Error
-        Log.error(exception: e) { "failed to connect to broker on #{broker.host}:#{broker.port}" }
+      rescue e
+        # NOTE:: any error, not only `IO::Error`: a refused connection surfaces
+        # as `MQTT::NotConnectedError`, and an unhandled one drops the Broker
+        # for good — nothing is published to it until source restarts. A broker
+        # that starts after source, or restarts under it, is ordinary
+        Log.error(exception: e) { "failed to connect to broker on #{broker.host}:#{broker.port}#{", retrying" if retry}" }
+        retry_publisher(broker_id) if retry
         return Resource::Result::Error
       end
 
@@ -89,6 +99,11 @@ module PlaceOS::Source
         !existing.nil?
       end
 
+      publisher.on_reconnect = -> {
+        Log.info { "reconnected to Broker<#{broker_id}>, republishing state" }
+        on_broker_ready.try &.call(broker_id)
+        nil
+      }
       publisher.start
 
       # Trigger state sync callback if this is a new broker after startup.
@@ -104,6 +119,30 @@ module PlaceOS::Source
       end
 
       Resource::Result::Success
+    end
+
+    private getter retrying = Set(String).new
+    private getter retrying_lock = Mutex.new
+
+    # Tries the Broker again with backoff, reading it from the database each
+    # time, until a publisher for it exists or the Broker is gone
+    protected def retry_publisher(broker_id : String) : Nil
+      return unless retrying_lock.synchronize { retrying.add?(broker_id) }
+
+      spawn do
+        delay = 1.second
+        begin
+          loop do
+            sleep delay
+            delay = {delay * 2, 30.seconds}.min
+            break if read_publishers(&.has_key?(broker_id))
+            break unless broker = Model::Broker.find?(broker_id)
+            break if create_publisher(broker, retry: false).success?
+          end
+        ensure
+          retrying_lock.synchronize { retrying.delete(broker_id) }
+        end
+      end
     end
 
     # Update safe fields on the `MqttPublisher`'s `Broker`
