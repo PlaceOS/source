@@ -1,4 +1,8 @@
-## Unreleased
+## v1.23.1 (2026-10-27)
+
+### Fix
+
+- **influx**: keep InfluxDB ingest independent of MQTT brokers ([#68](https://github.com/PlaceOS/source/pull/68))
 
 ## v1.23.0 (2026-10-14)
 
