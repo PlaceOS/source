@@ -31,6 +31,37 @@ module PlaceOS::Source
       end
     end
 
+    # what the broker retains is out of date once the connection drops, so the
+    # reconnection has to be followed by republishing state. That happens once
+    # the broker has accepted the new connection, never ahead of it
+    describe "reconnection" do
+      it "calls on_reconnect once the broker accepts the new connection" do
+        relay = PlaceOS::Source::BrokerRelay.new(test_broker.host, test_broker.port)
+        publisher = MqttPublisher.new(relay.broker)
+        reconnected = Channel(Bool).new(1)
+        publisher.on_reconnect = -> {
+          # nothing would be published from here if the client was not usable
+          reconnected.send(publisher.client.closed?)
+          nil
+        }
+        publisher.start
+
+        begin
+          relay.drop
+
+          select
+          when closed = reconnected.receive
+            closed.should be_false
+          when timeout(15.seconds)
+            fail "on_reconnect was not called"
+          end
+        ensure
+          publisher.stop rescue nil
+          relay.cut
+        end
+      end
+    end
+
     describe "#publish" do
       it "writes a status event to its MQTT topic" do
         client = PlaceOS::Source.subscriber

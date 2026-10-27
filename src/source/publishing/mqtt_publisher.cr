@@ -39,28 +39,32 @@ module PlaceOS::Source
     # Called once the client has re-established a dropped connection
     property on_reconnect : Proc(Nil)? = nil
 
-    @connections = Atomic(Int32).new(0)
+    @stopping = false
+
+    # Set while a publisher replacing this one connects. Both use the broker id
+    # as the client id, so the broker hands the session over and ends ours
+    property? superseded : Bool = false
 
     def initialize(@broker : PlaceOS::Model::Broker)
-      @client = MqttPublisher.client(@broker) { connection_opened }
+      @client = MqttPublisher.client(@broker)
+
+      # NOTE:: a broker that restarts without persistence comes back empty, and
+      # one that was down missed whatever changed meanwhile. Either way what it
+      # retains is no longer the state of the system, so a reconnection has to
+      # be followed by publishing all of it again. The client calls this once
+      # the broker has accepted the new connection, and from its own fiber
+      @client.on_reconnect { |_session_present| on_reconnect.try &.call }
+
+      spawn { watch_connection }
     end
 
-    # NOTE:: a broker that restarts without persistence comes back empty, and
-    # one that was down missed whatever changed meanwhile. Either way what it
-    # retains is no longer the state of the system, so a reconnection has to be
-    # followed by publishing all of it again. The client has no hook for that,
-    # but it builds a new transport for every connection, so the second and
-    # later transports mark reconnections
-    private def connection_opened : Nil
-      return if @connections.add(1) == 0
-      callback = on_reconnect
-      return unless callback
-
-      # after the client has resumed its session on the new transport
-      spawn do
-        sleep 1.second
-        callback.call
-      end
+    # The client reconnects by itself, and only stops for good when the broker
+    # says not to come back: credentials it refuses, or another client taking
+    # over our client id. Nothing is published to it after that, so say so
+    private def watch_connection : Nil
+      client.wait_close
+      return if @stopping || superseded?
+      Log.error { "MQTT client for Broker<#{broker.id}> on #{broker.host}:#{broker.port} has stopped and will not reconnect" }
     end
 
     # The protocol version that was actually negotiated with this broker
@@ -69,6 +73,7 @@ module PlaceOS::Source
     end
 
     def stop
+      @stopping = true
       super
       # NOTE:: disconnect first. `wait_close` blocks until the connection has
       # terminated, so waiting before asking it to stop hangs until the broker
@@ -90,7 +95,7 @@ module PlaceOS::Source
     # The connection settings are captured here rather than read from the model
     # on each attempt: a `Broker` update that changes them is not a "safe"
     # update, so `MqttBrokerManager` replaces the publisher outright
-    def self.client(broker : PlaceOS::Model::Broker, &on_transport : -> Nil) : ::MQTT::Client
+    def self.client(broker : PlaceOS::Model::Broker) : ::MQTT::Client
       Log.debug { {message: "creating MQTT client", host: broker.host, port: broker.port.to_s, tls: broker.tls} }
 
       host = broker.host
@@ -101,7 +106,6 @@ module PlaceOS::Source
       # be reopened. This is what lets the client re-establish the connection
       # itself, and what version negotiation needs for its fallback attempt
       client = ::MQTT::Client.new(reconnect: ::MQTT::Reconnect.new) do
-        on_transport.call
         tls = if secure
                 tls_client = OpenSSL::SSL::Context::Client.new
                 tls_client.verify_mode = OpenSSL::SSL::VerifyMode::NONE
@@ -156,7 +160,11 @@ module PlaceOS::Source
             Log.warn(exception: e) { "MQTT publish failed, waiting for the client to reconnect" }
           }
         ) do
-          # NOTE:: nothing waits on a broker that is down. Retrying every
+          # NOTE:: `closed?` holds until the broker has accepted a connection,
+          # not only while the socket is down: publishing ahead of that is a
+          # protocol error to a broker still taking an old session over.
+          #
+          # Nothing waits on a broker that is down. Retrying every
           # message until it returned held this queue for half a minute each,
           # which filled it and blocked `broadcast` — and with it every other
           # sink, InfluxDB included. Reconnecting republishes all state

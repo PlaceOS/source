@@ -79,9 +79,12 @@ module PlaceOS::Source
     #
     protected def create_publisher(broker : Model::Broker, retry : Bool = true) : Resource::Result
       broker_id = broker.id.as(String)
+      existing = read_publishers(&.[broker_id]?)
+      existing.try &.superseded = true
       begin
         publisher = MqttPublisher.new(broker)
       rescue e
+        existing.try &.superseded = false
         # NOTE:: any error, not only `IO::Error`: a refused connection surfaces
         # as `MQTT::NotConnectedError`, and an unhandled one drops the Broker
         # for good — nothing is published to it until source restarts. A broker
@@ -94,6 +97,7 @@ module PlaceOS::Source
       already_publishing = write_publishers do |publishers|
         # Close off exisiting publisher, if present
         existing = publishers[broker_id]?
+        existing.try &.superseded = true
         existing.stop unless existing.nil?
         publishers[broker_id] = publisher
         !existing.nil?
