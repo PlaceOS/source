@@ -211,4 +211,61 @@ module PlaceOS::Source
 
     state
   end
+
+  # Relays TCP to the MQTT broker, standing in for a broker that goes away
+  # under a connected publisher. `drop` breaks the connections open now and
+  # keeps listening; once `cut` nothing listens on the port, so reconnection
+  # attempts are refused
+  class BrokerRelay
+    getter port : Int32
+
+    @sockets = [] of TCPSocket
+    @lock = Mutex.new
+
+    def initialize(@upstream_host : String, @upstream_port : Int32)
+      @server = TCPServer.new("127.0.0.1", 0)
+      @port = @server.local_address.port
+      spawn { accept_loop }
+    end
+
+    private def accept_loop
+      while client = @server.accept?
+        upstream = TCPSocket.new(@upstream_host, @upstream_port)
+        @lock.synchronize { @sockets << client << upstream }
+        spawn { pipe(client, upstream) }
+        spawn { pipe(upstream, client) }
+      end
+    end
+
+    private def pipe(from, to)
+      IO.copy(from, to)
+    rescue
+    ensure
+      from.close rescue nil
+      to.close rescue nil
+    end
+
+    def cut : Nil
+      @server.close rescue nil
+      drop
+    end
+
+    def drop : Nil
+      @lock.synchronize do
+        @sockets.each { |socket| socket.close rescue nil }
+        @sockets.clear
+      end
+    end
+
+    def broker : Model::Broker
+      broker = Model::Broker.new(
+        name: "relay-#{UUID.random}",
+        host: "127.0.0.1",
+        port: port,
+        auth_type: :no_auth,
+      )
+      broker.id = "spec-relay-#{UUID.random}"
+      broker
+    end
+  end
 end
