@@ -14,5 +14,11 @@ module PlaceOS::Source
     abstract def stop
 
     abstract def stats : Hash(String, UInt64)
+
+    # Whether the sink holds the current value of each status, rather than a
+    # history of them. Only these are sent a resync
+    def retains_state? : Bool
+      true
+    end
   end
 end

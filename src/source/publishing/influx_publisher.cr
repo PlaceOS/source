@@ -127,15 +127,37 @@ module PlaceOS::Source
     # Generate an InfluxDB Point from an mqtt key + payload
     #
     def self.transform(message : Publisher::Message) : Array(Flux::Point)
+      points = build_points(message)
+      points.each { |point| filter_values(point) }
+      points
+    end
+
+    # Hashes any field or tag that matches the default filters
+    #
+    # NOTE:: per value, once parsed. The filters are anchored, and were matched
+    # against the raw JSON — where a string value is still in quotes — so
+    # nothing ever matched and values such as email addresses were stored
+    protected def self.filter_values(point : Flux::Point) : Nil
+      point.fields.transform_values! do |value|
+        value.is_a?(String) ? filter_string(value) : value
+      end
+      point.tags.transform_values! { |value| filter_string(value) }
+    end
+
+    private FILTER = Regex.union(DEFAULT_FILTERS)
+
+    protected def self.filter_string(value : String) : String
+      value.gsub(FILTER) { |match_string, _| hmac_sha256(match_string) }
+    end
+
+    protected def self.build_points(message : Publisher::Message) : Array(Flux::Point)
       timestamp = message.timestamp
       data = message.data
 
       # Only Module status events are persisted
       return [] of Flux::Point unless data.is_a? Mappings::Status
 
-      payload = message.payload.presence.try &.gsub(Regex.union(DEFAULT_FILTERS)) do |match_string, _|
-        hmac_sha256(match_string)
-      end
+      payload = message.payload.presence
 
       # NOTE:: we should try and detect unsupport string values to prevent errors
       # Influx doesn't support `nil`
@@ -256,24 +278,25 @@ module PlaceOS::Source
         next if compacted.empty?
         measurement = default_measurement || data.module_name
 
-        override_timestamp = nil
-        if time_key = raw.ts_timestamp
-          if time = compacted.delete(time_key).as?(Float64)
-            override_timestamp = Time.unix time.to_i64
-          end
-        end
-
         # Must include a `pos_uniq` tag for seperating points
         # as per: https://docs.influxdata.com/influxdb/v2.0/write-data/best-practices/duplicate-points/#add-an-arbitrary-tag
         local_tags = tags.dup
         local_tags["pos_uniq"] = index.to_s
 
-        if point = build_custom_point(measurement, data, fields, local_tags, compacted, override_timestamp || timestamp, ts_map, raw.ts_tag_keys)
+        if point = build_custom_point(measurement, data, fields, local_tags, compacted, point_timestamp(compacted, raw.ts_timestamp) || timestamp, ts_map, raw.ts_tag_keys)
           points << point
         end
       end
 
       points
+    end
+
+    # The point's own timestamp, taken out of its values, when it has one
+    protected def self.point_timestamp(values, time_key : String?) : Time?
+      return unless time_key
+      if time = values.delete(time_key).as?(Float64)
+        Time.unix time.to_i64
+      end
     end
 
     protected def self.build_custom_point(measurement, data, fields, local_tags, compacted, timestamp, ts_map, ts_tag_keys)

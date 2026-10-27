@@ -4,6 +4,20 @@ require "time"
 module PlaceOS::Source
   describe InfluxPublisher do
     describe "#transform" do
+      it "hashes values matching the default filters" do
+        status_event = Mappings.new(mock_state).status_events?("mod-1234", "state").not_nil!.first
+        message = Publisher::Message.new(status_event, {
+          email: "someone@example.com",
+          note:  "not an address",
+        }.to_json, timestamp: Time::UNIX_EPOCH)
+
+        point = InfluxPublisher.transform(message).first
+        email = point.fields["email"].as(String)
+        email.should_not eq "someone@example.com"
+        email.size.should eq 64
+        point.fields["note"].should eq "not an address"
+      end
+
       it "ignores PlaceOS Metadata events" do
         message = Publisher::Message.new(
           data: Mappings::Metadata.new("some-model-id"),

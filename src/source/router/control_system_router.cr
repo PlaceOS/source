@@ -86,7 +86,7 @@ module PlaceOS::Source::Router
           mappings.write { |state| state.system_zones[control_system_id] = zones }
           mappings.set_system_modules(control_system_id, modules)
         else
-          mappings.write { |state| state.system_zones.delete(control_system_id) }
+          mappings.write(&.system_zones.delete(control_system_id))
           mappings.remove_system_modules(control_system_id)
         end
 

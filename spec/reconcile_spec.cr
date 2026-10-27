@@ -107,7 +107,7 @@ module PlaceOS::Source
       place(mappings, [] of {String, String})
       events.reconcile_now(Set{a})
 
-      keyed(manager.deletions).keys.sort.should eq ["Display/1/connected", "Display/1/power"]
+      keyed(manager.deletions).keys.sort!.should eq ["Display/1/connected", "Display/1/power"]
       mappings.published.for_module(a).should be_empty
     ensure
       store.try &.clear

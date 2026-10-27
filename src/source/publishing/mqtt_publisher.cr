@@ -156,6 +156,12 @@ module PlaceOS::Source
             Log.warn(exception: e) { "MQTT publish failed, waiting for the client to reconnect" }
           }
         ) do
+          # NOTE:: nothing waits on a broker that is down. Retrying every
+          # message until it returned held this queue for half a minute each,
+          # which filled it and blocked `broadcast` — and with it every other
+          # sink, InfluxDB included. Reconnecting republishes all state
+          # (`on_reconnect`), which covers whatever is skipped here
+          return if client.closed?
           client.publish(topic: key, payload: payload, retain: true)
         end
       end
@@ -190,6 +196,8 @@ module PlaceOS::Source
           Log.warn(exception: e) { "MQTT delete failed, waiting for the client to reconnect" }
         }
       ) do
+        # down: the sweep that follows reconnecting removes it (see `publish`)
+        return if client.closed?
         client.publish(topic: key, payload: "", retain: true)
       end
     rescue e
@@ -226,7 +234,7 @@ module PlaceOS::Source
       last = Time.instant
 
       client.subscribe(filter) do |topic, payload, retained|
-        next unless retained && !payload.empty?
+        next if !retained || payload.empty?
         wanted = keep.call(topic)
         lock.synchronize do
           topics << topic if wanted && topics.size < max
