@@ -222,8 +222,9 @@ module PlaceOS::Source
     @sockets = [] of TCPSocket
     @lock = Mutex.new
 
-    def initialize(@upstream_host : String, @upstream_port : Int32)
-      @server = TCPServer.new("127.0.0.1", 0)
+    # `port` 0 picks a free one
+    def initialize(@upstream_host : String, @upstream_port : Int32, port : Int32 = 0)
+      @server = TCPServer.new("127.0.0.1", port)
       @port = @server.local_address.port
       spawn { accept_loop }
     end
