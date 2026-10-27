@@ -234,7 +234,7 @@ module PlaceOS::Source
       last = Time.instant
 
       client.subscribe(filter) do |topic, payload, retained|
-        next unless retained && !payload.empty?
+        next if !retained || payload.empty?
         wanted = keep.call(topic)
         lock.synchronize do
           topics << topic if wanted && topics.size < max

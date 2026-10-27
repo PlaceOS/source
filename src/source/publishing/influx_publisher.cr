@@ -278,24 +278,25 @@ module PlaceOS::Source
         next if compacted.empty?
         measurement = default_measurement || data.module_name
 
-        override_timestamp = nil
-        if time_key = raw.ts_timestamp
-          if time = compacted.delete(time_key).as?(Float64)
-            override_timestamp = Time.unix time.to_i64
-          end
-        end
-
         # Must include a `pos_uniq` tag for seperating points
         # as per: https://docs.influxdata.com/influxdb/v2.0/write-data/best-practices/duplicate-points/#add-an-arbitrary-tag
         local_tags = tags.dup
         local_tags["pos_uniq"] = index.to_s
 
-        if point = build_custom_point(measurement, data, fields, local_tags, compacted, override_timestamp || timestamp, ts_map, raw.ts_tag_keys)
+        if point = build_custom_point(measurement, data, fields, local_tags, compacted, point_timestamp(compacted, raw.ts_timestamp) || timestamp, ts_map, raw.ts_tag_keys)
           points << point
         end
       end
 
       points
+    end
+
+    # The point's own timestamp, taken out of its values, when it has one
+    protected def self.point_timestamp(values, time_key : String?) : Time?
+      return unless time_key
+      if time = values.delete(time_key).as?(Float64)
+        Time.unix time.to_i64
+      end
     end
 
     protected def self.build_custom_point(measurement, data, fields, local_tags, compacted, timestamp, ts_map, ts_tag_keys)
