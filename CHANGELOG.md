@@ -1,3 +1,9 @@
+## v1.23.2 (2026-10-27)
+
+### Fix
+
+- **mqtt**: keep reconnecting after a session takeover ([#69](https://github.com/PlaceOS/source/pull/69))
+
 ## v1.23.1 (2026-10-27)
 
 ### Fix
