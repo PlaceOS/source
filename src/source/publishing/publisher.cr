@@ -30,6 +30,9 @@ module PlaceOS::Source
     # same topic is, by construction, a value that belongs there
     getter message_queue : Channel(Message | Deletion) = Channel(Message | Deletion).new(StatusEvents::BATCH_SIZE)
 
+    # How long buffered messages may wait before they are committed
+    property commit_interval : Time::Span = 10.seconds
+
     getter processed : UInt64 = 0_u64
     getter deleted : UInt64 = 0_u64
 
@@ -83,6 +86,7 @@ module PlaceOS::Source
     end
 
     private def consume_messages
+      committed = Time.instant
       while !message_queue.closed?
         select
         when item = message_queue.receive?
@@ -98,11 +102,20 @@ module PlaceOS::Source
             handle_deletion(item)
           in Nil
           end
-        when timeout(10.seconds)
-          # commit any buffered messages that have not been published yet
+        when timeout(commit_interval)
+        end
+
+        # NOTE:: on age, not only once the queue goes quiet. A steady trickle
+        # never leaves it idle for a whole interval, so messages sat buffered
+        # until a full batch arrived
+        if Time.instant - committed >= commit_interval
           commit
+          committed = Time.instant
         end
       end
+    ensure
+      # whatever is still buffered when the publisher stops
+      commit
     end
 
     private def handle_deletion(deletion : Deletion) : Nil

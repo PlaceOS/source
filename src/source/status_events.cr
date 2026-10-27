@@ -160,7 +160,7 @@ module PlaceOS::Source
         store = PlaceOS::Driver::RedisStorage.new(module_id)
         store.each do |key, value|
           status_updated += 1_u64
-          add_event({source: :db, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
+          add_event({source: :resync, mod_id: module_id, status: key}, {pattern: pattern, payload: value, timestamp: Time.utc})
         end
 
         # Backpressure if event container is growing too fast
@@ -255,13 +255,14 @@ module PlaceOS::Source
 
     private def process_batch(batch)
       batch.each do |(key, value)|
-        process_pevent(value[:pattern], key[:mod_id], key[:status], value[:payload], value[:timestamp])
+        managers = key[:source] == :resync ? publisher_managers.select(&.retains_state?) : publisher_managers
+        process_pevent(value[:pattern], key[:mod_id], key[:status], value[:payload], value[:timestamp], managers)
       end
     rescue error
       Log.error(exception: error) { "Error processing event batch" }
     end
 
-    protected def process_pevent(pattern : String, module_id : String, status : String, payload : String, timestamp : Time)
+    protected def process_pevent(pattern : String, module_id : String, status : String, payload : String, timestamp : Time, managers : Array(PublisherManager) = publisher_managers)
       events = mappings.status_events?(module_id, status)
 
       Log.debug { {
@@ -280,7 +281,7 @@ module PlaceOS::Source
         end
 
         message = Publisher::Message.new(event, payload, timestamp)
-        publisher_managers.each do |manager|
+        managers.each do |manager|
           Log.trace { "broadcasting message to #{manager.class}" }
           manager.broadcast(message)
         end

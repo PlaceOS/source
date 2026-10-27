@@ -40,6 +40,12 @@ module PlaceOS::Source
       false
     end
 
+    # A resync is the current value again, stamped now: written here it would
+    # record changes that never happened, for every status at once
+    def retains_state? : Bool
+      false
+    end
+
     def broadcast(message : Publisher::Message)
       publisher.message_queue.send(message)
     end
