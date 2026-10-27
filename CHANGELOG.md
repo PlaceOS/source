@@ -1,3 +1,9 @@
+## v1.23.3 (2026-10-27)
+
+### Fix
+
+- **mqtt**: apply broker changes from the database seamlessly ([#70](https://github.com/PlaceOS/source/pull/70))
+
 ## v1.23.2 (2026-10-27)
 
 ### Fix
