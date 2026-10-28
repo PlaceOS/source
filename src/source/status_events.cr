@@ -487,7 +487,12 @@ module PlaceOS::Source
     # NOTE:: in rounds. A round takes up to `CLEAR_BATCH` topics, removes them
     # and waits for the removals to reach the broker, so the next subscription
     # is handed what is left. It ends when a round finds nothing, so it is
-    # complete even when the broker drops part of what it sends a client
+    # complete even when the broker drops part of what it sends a client.
+    #
+    # It also ends when a round finds only topics the round before tried to
+    # remove: the removals are not reaching the broker (an ACL refusing them,
+    # or a connection that is down), and rounds would go on forever with
+    # event processing held back
     def clear_retained(batch : Int32 = CLEAR_BATCH) : Int64
       cleared = 0_i64
       process_lock.synchronize do
@@ -496,12 +501,19 @@ module PlaceOS::Source
           manager.publishers.each do |publisher|
             {"state", "metadata"}.each do |kind|
               filter = File.join(MQTT_NAMESPACE, "+", kind, "#")
+              previous = Set(String).new
               loop do
                 topics = publisher.retained_topics(filter, max: batch) { true }
                 break if topics.empty?
+                if topics.subset_of?(previous)
+                  cleared -= topics.size
+                  Log.error { "unable to remove #{topics.size} retained #{kind} topics from Broker<#{publisher.broker.id}>, they remain" }
+                  break
+                end
                 topics.each { |topic| publisher.queue_delete_topic(topic) }
                 await_deletions
                 cleared += topics.size
+                previous = topics
               end
             end
           end
