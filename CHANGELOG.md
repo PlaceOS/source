@@ -1,3 +1,9 @@
+## v1.23.4 (2026-10-28)
+
+### Fix
+
+- **mqtt**: stop clearing when removals do not reach the broker
+
 ## v1.23.3 (2026-10-27)
 
 ### Fix
