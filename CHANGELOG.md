@@ -1,3 +1,9 @@
+## v1.24.0 (2026-11-03)
+
+### Feat
+
+- **mqtt**: retain boolean statuses under their value as well
+
 ## v1.23.4 (2026-10-28)
 
 ### Fix
