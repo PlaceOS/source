@@ -466,7 +466,12 @@ module PlaceOS::Source
           cache[control_system_id] = keys
         end
       end
-      keys.includes?(topic)
+      return true if keys.includes?(topic)
+
+      # `<key>/true` and `<key>/false` belong to a published boolean status.
+      # Which of the two is current is not known here, but publishing a value
+      # removes the other, and every value is published again before a sweep
+      MqttPublisher.bool_topic_key(topic).try { |key| keys.includes?(key) } || false
     end
 
     # Clearing

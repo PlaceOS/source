@@ -176,8 +176,9 @@ module PlaceOS::Source
         second_event, second_key = PlaceOS::Source.unique_status_event(org)
 
         PlaceOS::Source.with_publisher do |publisher|
-          publisher.publish(Publisher::Message.new(first_event, "true", timestamp: Time.utc))
-          publisher.publish(Publisher::Message.new(second_event, "false", timestamp: Time.utc))
+          # not booleans, which would retain a second topic each
+          publisher.publish(Publisher::Message.new(first_event, %("on"), timestamp: Time.utc))
+          publisher.publish(Publisher::Message.new(second_event, %("off"), timestamp: Time.utc))
           sleep 300.milliseconds
         end
 
@@ -223,6 +224,91 @@ module PlaceOS::Source
         ensure
           client.disconnect rescue nil
         end
+      end
+    end
+
+    # so a consumer can subscribe to every `connected/false`, say
+    describe "boolean topics" do
+      it "retains a boolean status under its value as well" do
+        status_event, key = PlaceOS::Source.unique_status_event
+
+        PlaceOS::Source.with_publisher do |publisher|
+          publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
+          sleep 300.milliseconds
+        end
+
+        client = PlaceOS::Source.subscriber
+        begin
+          topic, payload, retained = PlaceOS::Source.collect(client, "#{key}/true").first
+          topic.should eq "#{key}/true"
+          JSON.parse(payload)["value"].should be_true
+          retained.should be_true
+          PlaceOS::Source.retained(client, "#{key}/false").should be_empty
+        ensure
+          client.disconnect rescue nil
+        end
+      end
+
+      it "removes the opposite topic when the value changes" do
+        status_event, key = PlaceOS::Source.unique_status_event
+
+        PlaceOS::Source.with_publisher do |publisher|
+          publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
+          sleep 100.milliseconds
+          publisher.publish(Publisher::Message.new(status_event, "false", timestamp: Time.utc))
+          sleep 300.milliseconds
+        end
+
+        client = PlaceOS::Source.subscriber
+        begin
+          PlaceOS::Source.retained(client, "#{key}/+").map(&.[](0)).should eq ["#{key}/false"]
+          PlaceOS::Source.retained(client, key).size.should eq 1
+        ensure
+          client.disconnect rescue nil
+        end
+      end
+
+      it "does not retain one for a value that is not a boolean" do
+        status_event, key = PlaceOS::Source.unique_status_event
+
+        PlaceOS::Source.with_publisher do |publisher|
+          publisher.publish(Publisher::Message.new(status_event, %("true"), timestamp: Time.utc))
+          sleep 300.milliseconds
+        end
+
+        client = PlaceOS::Source.subscriber
+        begin
+          PlaceOS::Source.retained(client, "#{key}/+").should be_empty
+        ensure
+          client.disconnect rescue nil
+        end
+      end
+
+      it "removes both when the status is removed" do
+        status_event, key = PlaceOS::Source.unique_status_event
+
+        PlaceOS::Source.with_publisher do |publisher|
+          publisher.publish(Publisher::Message.new(status_event, "true", timestamp: Time.utc))
+          sleep 200.milliseconds
+          publisher.publish(Publisher::Message.new(status_event, "null", timestamp: Time.utc))
+          sleep 300.milliseconds
+        end
+
+        client = PlaceOS::Source.subscriber
+        begin
+          PlaceOS::Source.retained(client, "#{key}/+").should be_empty
+          PlaceOS::Source.retained(client, key).should be_empty
+        ensure
+          client.disconnect rescue nil
+        end
+      end
+
+      it "recognises a boolean topic" do
+        MqttPublisher.bool_topic_key("a/b/connected/false").should eq "a/b/connected"
+        MqttPublisher.bool_topic_key("a/b/connected/true").should eq "a/b/connected"
+        MqttPublisher.bool_topic_key("a/b/connected").should be_nil
+        MqttPublisher.bool_topic_value(" false ").should be_false
+        MqttPublisher.bool_topic_value(%("false")).should be_nil
       end
     end
 

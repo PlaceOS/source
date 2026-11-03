@@ -147,6 +147,24 @@ module PlaceOS::Source
     ensure
       store.try &.clear
     end
+
+    it "keeps the boolean topics of a published status, and sweeps those of one that is not" do
+      a = "mod-#{UUID.random}"
+      org = "org-#{UUID.random}"
+      store = stored(a, {"connected" => "true"})
+      mappings = reconcile_mappings(org, [{a, "Display"}])
+      events = StatusEvents.new(mappings, [MockManager.new] of PublisherManager)
+      events.reconcile_now(Set{a})
+
+      live = MqttPublisher.generate_key(mappings.published.for_module(a).first).not_nil!
+      stale = live.sub("/Display/1/", "/Display/9/")
+      publisher = SweepRecorder.new
+      events.sweep_now(publisher, Set{"#{live}/true", "#{live}/false", "#{stale}/true"})
+
+      publisher.topics.should eq ["#{stale}/true"]
+    ensure
+      store.try &.clear
+    end
   end
 
   private class SweepRecorder < Publisher

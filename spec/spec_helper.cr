@@ -127,6 +127,22 @@ module PlaceOS::Source
     Array(Tuple(String, String, Bool)).new(count) { take(received, topic, timeout) }
   end
 
+  # Everything retained under `topic`, collected until the broker goes quiet
+  def self.retained(client, topic, quiet = 1.second) : Array(Tuple(String, String, Bool))
+    received = subscribe_channel(client, topic)
+    messages = [] of Tuple(String, String, Bool)
+    loop do
+      select
+      when message = received.receive
+        messages << message if message[2] && !message[1].empty?
+      when timeout(quiet)
+        break
+      end
+    end
+    client.unsubscribe(topic) rescue nil
+    messages
+  end
+
   # Wraps a single publisher, so a router's deletions reach a real broker
   class MockBrokerManager
     include PublisherManager

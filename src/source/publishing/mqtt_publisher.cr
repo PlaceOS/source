@@ -25,8 +25,12 @@ module PlaceOS::Source
     end
 
     def self.payload(value, broker : PlaceOS::Model::Broker?, timestamp : Time)
-      value = broker.sanitize(value) unless broker.nil? || value.nil?
-      Event.new(value, timestamp).to_json
+      Event.new(sanitize(value, broker), timestamp).to_json
+    end
+
+    def self.sanitize(value : String?, broker : PlaceOS::Model::Broker?) : String?
+      return value if broker.nil? || value.nil?
+      broker.sanitize(value)
     end
 
     getter broker : PlaceOS::Model::Broker
@@ -137,53 +141,80 @@ module PlaceOS::Source
 
       if key = MqttPublisher.generate_key(message.data)
         # Sanitize the message payload according the Broker's filters
-        payload = broker_lock.read do
-          MqttPublisher.payload(message.payload, broker, message.timestamp)
+        value = broker_lock.read do
+          MqttPublisher.sanitize(message.payload, broker)
         end
+        payload = Event.new(value, message.timestamp).to_json
 
         Log.trace { {message: "writing to MQTT", key: key} }
 
         # NOTE:: `retain: true` is what makes the current value of every status
         # available to a subscriber that connects later. The broker holds one
         # message per topic, so this is the state of the system, not a log of it
+        return unless retain(key, payload)
+
+        # A boolean status is also retained under `<key>/true` or `<key>/false`,
+        # so a consumer can subscribe to, say, every `connected/false`. The
+        # opposite topic is removed first, so only one of the two is ever held.
         #
-        # The client re-establishes a dropped connection itself, so a retry here
-        # only has to cover the window while that is happening. It must not
-        # build a new client — the old code did, which orphaned the previous
-        # connection on every retry
-        Retriable.retry(
-          max_attempts: 10,
-          base_interval: 250.milliseconds,
-          max_interval: 5.seconds,
-          on: IO::Error | MQTT::Error,
-          on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
-            Log.warn(exception: e) { "MQTT publish failed, waiting for the client to reconnect" }
-          }
-        ) do
-          # NOTE:: `closed?` holds until the broker has accepted a connection,
-          # not only while the socket is down: publishing ahead of that is a
-          # protocol error to a broker still taking an old session over.
-          #
-          # Nothing waits on a broker that is down. Retrying every
-          # message until it returned held this queue for half a minute each,
-          # which filled it and blocked `broadcast` — and with it every other
-          # sink, InfluxDB included. Reconnecting republishes all state
-          # (`on_reconnect`), which covers whatever is skipped here
-          return if client.closed?
-          client.publish(topic: key, payload: payload, retain: true)
+        # NOTE:: decided on the sanitized value, so a Broker that filters the
+        # value out does not have it given away by the topic instead
+        flag = MqttPublisher.bool_topic_value(value)
+        if message.data.is_a?(Mappings::Status) && !flag.nil?
+          return unless retain(MqttPublisher.bool_topic(key, !flag), "")
+          retain(MqttPublisher.bool_topic(key, flag), payload)
         end
       end
     rescue e
       Log.error(exception: e) { "error while publishing Message<data=#{message.data}, key=#{key}, payload=#{message.payload}>" }
     end
 
+    # Retains `payload` under `topic`, an empty payload removing it. Returns
+    # `false` when the client is not connected and nothing was written.
+    #
+    # The client re-establishes a dropped connection itself, so a retry here
+    # only has to cover the window while that is happening. It must not build a
+    # new client — the old code did, which orphaned the previous connection on
+    # every retry
+    private def retain(topic : String, payload : String) : Bool
+      Retriable.retry(
+        max_attempts: 10,
+        base_interval: 250.milliseconds,
+        max_interval: 5.seconds,
+        on: IO::Error | MQTT::Error,
+        on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
+          Log.warn(exception: e) { "MQTT #{payload.empty? ? "delete" : "publish"} failed, waiting for the client to reconnect" }
+        }
+      ) do
+        # NOTE:: `closed?` holds until the broker has accepted a connection,
+        # not only while the socket is down: publishing ahead of that is a
+        # protocol error to a broker still taking an old session over.
+        #
+        # Nothing waits on a broker that is down. Retrying every
+        # message until it returned held this queue for half a minute each,
+        # which filled it and blocked `broadcast` — and with it every other
+        # sink, InfluxDB included. Reconnecting republishes all state
+        # (`on_reconnect`), and the sweep that follows removes what is stale,
+        # which covers whatever is skipped here
+        return false if client.closed?
+        client.publish(topic: topic, payload: payload, retain: true)
+      end
+      true
+    end
+
     # MQTT-3.3.1-7, a zero length retained payload removes what the broker holds
     # for the topic. Anything else — including a JSON null — would simply be
     # retained in its place, and consumers would keep seeing a value
+    #
+    # The value it had is not known, so both of a status' boolean topics go too
     def delete(message : Message) : Nil
       key = MqttPublisher.generate_key(message.data)
       return unless key
       delete_topic(key)
+      if message.data.is_a?(Mappings::Status)
+        delete_topic(MqttPublisher.bool_topic(key, true))
+        delete_topic(MqttPublisher.bool_topic(key, false))
+      end
     end
 
     # Whether a payload means the value no longer exists. Redis storage
@@ -194,20 +225,7 @@ module PlaceOS::Source
 
     def delete_topic(key : String) : Nil
       Log.trace { {message: "removing retained value", key: key} }
-
-      Retriable.retry(
-        max_attempts: 10,
-        base_interval: 250.milliseconds,
-        max_interval: 5.seconds,
-        on: IO::Error | MQTT::Error,
-        on_retry: ->(e : Exception, _attempt : Int32, _elapsed : Time::Span, _next : Time::Span) {
-          Log.warn(exception: e) { "MQTT delete failed, waiting for the client to reconnect" }
-        }
-      ) do
-        # down: the sweep that follows reconnecting removes it (see `publish`)
-        return if client.closed?
-        client.publish(topic: key, payload: "", retain: true)
-      end
+      retain(key, "")
     rescue e
       Log.error(exception: e) { "error removing retained value for #{key}" }
     end
@@ -325,6 +343,30 @@ module PlaceOS::Source
     # The system a state topic belongs to
     def self.state_topic_system_id(topic : String) : String?
       topic.split('/')[STATE_TOPIC_SYSTEM_SEGMENT]?
+    end
+
+    # Boolean topics
+    ###########################################################################
+
+    # Where a boolean status is also retained, `<key>/true` or `<key>/false`
+    def self.bool_topic(key : String, value : Bool) : String
+      "#{key}/#{value}"
+    end
+
+    # The boolean a status value is, or `nil` for any other value
+    def self.bool_topic_value(value : String?) : Bool?
+      case value.try &.strip
+      when "true"  then true
+      when "false" then false
+      end
+    end
+
+    # The status key a boolean topic belongs to, or `nil` when `topic` is not
+    # one. Only the shape is checked, the caller decides whether `key` is real
+    def self.bool_topic_key(topic : String) : String?
+      {"/true", "/false"}.each do |suffix|
+        return topic.rchop(suffix) if topic.ends_with?(suffix)
+      end
     end
 
     def self.extract_zone_hierarchy(zone_mapping : Hash(String, String))

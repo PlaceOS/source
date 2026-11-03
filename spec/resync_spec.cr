@@ -94,7 +94,10 @@ module PlaceOS::Source
         # republishing is queued, so give it a moment to reach the broker
         wait_for("the live state") { retained_payloads(client, "placeos/#{org}/#").has_key?(live) }
         retained = retained_payloads(client, "placeos/#{org}/#")
-        retained.keys.should eq [live]
+        # a boolean is retained under its value as well
+        wait_for("the boolean topic") { retained_payloads(client, "placeos/#{org}/#").has_key?("#{live}/true") }
+        retained = retained_payloads(client, "placeos/#{org}/#")
+        retained.keys.sort.should eq [live, "#{live}/true"]
         JSON.parse(retained[live])["value"].should eq true
 
         metadata = retained_payloads(client, "placeos/#{Mappings.scope}/metadata/#")
@@ -170,11 +173,15 @@ module PlaceOS::Source
       wait_for("the event to be published") { !mappings.published.for_module(module_id).empty? }
       mappings.published.for_module(module_id).should eq Set{live_event}
       wait_for("the event to be retained") { retained_payloads(client, "placeos/#{org}/#").has_key?(live) }
-      retained_payloads(client, "placeos/#{org}/#").keys.should eq [live]
+      wait_for("the boolean topic") { retained_payloads(client, "placeos/#{org}/#").has_key?("#{live}/true") }
+      retained_payloads(client, "placeos/#{org}/#").keys.sort.should eq [live, "#{live}/true"]
     ensure
       events.try &.stop
       publisher.try &.stop rescue nil
-      client.try { |c| c.publish(live.not_nil!, "", retain: true) rescue nil; c.disconnect }
+      client.try do |c|
+        {live.not_nil!, "#{live}/true"}.each { |topic| c.publish(topic, "", retain: true) rescue nil }
+        c.disconnect
+      end
     end
 
     it "gives up on topics whose removal never reaches the broker" do
